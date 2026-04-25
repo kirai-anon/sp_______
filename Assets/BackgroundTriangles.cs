@@ -6,78 +6,112 @@ public class FlatLandscape : MonoBehaviour
     public int width = 10;
     public int height = 10;
     public float spacing = 1f;
-    public float jitter = 0.4f;
+    public float baseJitter = 0.5f;
+
+    [Header("Movement")]
+    public float jitterAmount = 0.4f;
+    public float driftSpeed = 0.5f;
+
+    [Header("Color Shifting")]
+    public float colorChangeSpeed = 1.5f;
+
+    private Mesh mesh;
+    private Vector3[] vertices;
+    private Color[] colors;
+    private Color[] targetColors;
+
+    // Store original grid center points to drift around
+    private Vector3[,] baseGrid;
 
     void Start()
     {
-        Generate();
-    }
-
-    void Generate()
-    {
-        Mesh mesh = new Mesh();
+        mesh = new Mesh();
+        mesh.MarkDynamic(); // Optimizes mesh for frequent updates
         GetComponent<MeshFilter>().mesh = mesh;
 
-        // 1. Pre-calculate the "jittered" grid points so triangles share the same corner positions
-        Vector3[,] grid = new Vector3[width + 1, height + 1];
+        baseGrid = new Vector3[width + 1, height + 1];
         float hW = (width * spacing) / 2f;
         float hH = (height * spacing) / 2f;
 
         for (int y = 0; y <= height; y++)
-        {
             for (int x = 0; x <= width; x++)
-            {
-                grid[x, y] = new Vector3(
-                    x * spacing - hW + Random.Range(-jitter, jitter),
-                    y * spacing - hH + Random.Range(-jitter, jitter),
-                    10 // Your Z position
+                baseGrid[x, y] = new Vector3(
+                    x * spacing - hW + Random.Range(-baseJitter, baseJitter),
+                    y * spacing - hH + Random.Range(-baseJitter, baseJitter),
+                    10
                 );
-            }
+
+        int triCount = width * height * 2;
+        vertices = new Vector3[triCount * 3];
+        colors = new Color[triCount * 3];
+        targetColors = new Color[triCount * 3];
+        int[] triangles = new int[triCount * 3];
+
+        for (int i = 0; i < triangles.Length; i++)
+        {
+            triangles[i] = i;
+            if (i % 3 == 0) targetColors[i] = GetBlueColor(); // Set initial target
         }
 
-        // 2. Build the mesh with 6 unique vertices per "square" (cell) to allow flat coloring
-        int triCount = width * height * 2;
-        Vector3[] vertices = new Vector3[triCount * 3];
-        int[] triangles = new int[triCount * 3];
-        Color[] colors = new Color[triCount * 3];
+        mesh.vertices = vertices;
+        mesh.triangles = triangles;
+    }
 
+    void Update()
+    {
         int v = 0;
+        float time = Time.time * driftSpeed;
+
         for (int y = 0; y < height; y++)
         {
             for (int x = 0; x < width; x++)
             {
-                // Get the 4 corners from our jittered grid
-                Vector3 bl = grid[x, y];
-                Vector3 tl = grid[x, y + 1];
-                Vector3 tr = grid[x + 1, y + 1];
-                Vector3 br = grid[x + 1, y];
+                // 1. Calculate drifting corners using Perlin Noise for smoothness
+                Vector3 bl = GetDriftedPos(x, y, time);
+                Vector3 tl = GetDriftedPos(x, y + 1, time);
+                Vector3 tr = GetDriftedPos(x + 1, y + 1, time);
+                Vector3 br = GetDriftedPos(x + 1, y, time);
 
-                // Triangle 1
-                Color c1 = GetBlueColor();
-                vertices[v] = bl; vertices[v + 1] = tl; vertices[v + 2] = tr;
-                colors[v] = c1; colors[v + 1] = c1; colors[v + 2] = c1;
-                triangles[v] = v; triangles[v + 1] = v + 1; triangles[v + 2] = v + 2;
+                // 2. Update Colors & Vertices for Triangle 1
+                UpdateTriangle(v, bl, tl, tr);
                 v += 3;
 
-                // Triangle 2
-                Color c2 = GetBlueColor();
-                vertices[v] = bl; vertices[v + 1] = tr; vertices[v + 2] = br;
-                colors[v] = c2; colors[v + 1] = c2; colors[v + 2] = c2;
-                triangles[v] = v; triangles[v + 1] = v + 1; triangles[v + 2] = v + 2;
+                // 3. Update Colors & Vertices for Triangle 2
+                UpdateTriangle(v, bl, tr, br);
                 v += 3;
             }
         }
 
         mesh.vertices = vertices;
-        mesh.triangles = triangles;
         mesh.colors = colors;
-        mesh.RecalculateNormals();
+    }
+
+    void UpdateTriangle(int index, Vector3 p1, Vector3 p2, Vector3 p3)
+    {
+        // Ease towards target color
+        if (Random.value < 0.003f) targetColors[index] = GetBlueColor();
+
+        Color nextColor = Color.Lerp(colors[index], targetColors[index], Time.deltaTime * colorChangeSpeed);
+
+        for (int i = 0; i < 3; i++) colors[index + i] = nextColor;
+
+        vertices[index] = p1;
+        vertices[index + 1] = p2;
+        vertices[index + 2] = p3;
+    }
+
+    Vector3 GetDriftedPos(int x, int y, float t)
+    {
+        Vector3 basePos = baseGrid[x, y];
+        // Use PerlinNoise so neighboring vertices move somewhat together
+        float offsetX = (Mathf.PerlinNoise(x * 0.5f + t, y * 0.5f) - 0.5f) * jitterAmount;
+        float offsetY = (Mathf.PerlinNoise(x * 0.5f, y * 0.5f + t) - 0.5f) * jitterAmount;
+        return basePos + new Vector3(offsetX, offsetY, 0);
     }
 
     Color GetBlueColor()
     {
-        float b = Random.Range(0.05f, 0.1f);
-        float s = Random.Range(0.0f, 0.05f);
-        return new Color(s, s, s + b);
+        float s = Random.Range(0.00f, 0.04f);
+        return new Color(s, s, s + s);
     }
 }

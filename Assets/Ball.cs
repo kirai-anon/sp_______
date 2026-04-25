@@ -120,6 +120,8 @@ public class Ball : MonoBehaviour
 
         // Tick poison
         UpdatePoison(dt);
+
+        spawnDriftParticles(pos);
     }
 
     // ---- Damage ----
@@ -368,6 +370,28 @@ public class Ball : MonoBehaviour
             Particle p = particle.AddComponent<Particle>();
             Vector2 randomDir = UnityEngine.Random.insideUnitCircle.normalized;
             float speed = UnityEngine.Random.Range(6f, 12f);
+            p.Initialize(randomDir * speed, UnityEngine.Random.Range(0.4f, 1.2f));
+        }
+    }
+    
+    private void spawnDriftParticles(Vector3 position)
+    {
+        int particleCount = UnityEngine.Random.Range(-6, 2);
+
+        if (particleCount <= 0) return;
+
+        for (int i = 0; i < particleCount; i++)
+        {
+            GameObject particle = new GameObject("Particle");
+            particle.transform.position = position;
+
+            SpriteRenderer sr = particle.AddComponent<SpriteRenderer>();
+            sr.sprite = CreateParticleSprite();
+            sr.color = color; // Use ball's color
+
+            Particle p = particle.AddComponent<Particle>();
+            Vector2 randomDir = UnityEngine.Random.insideUnitCircle.normalized;
+            float speed = UnityEngine.Random.Range(1f, 2f);
             p.Initialize(randomDir * speed, UnityEngine.Random.Range(0.4f, 1.2f));
         }
     }
