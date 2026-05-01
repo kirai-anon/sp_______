@@ -1,8 +1,18 @@
+using Unity.VisualScripting;
 using UnityEngine;
 
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
 public class FlatLandscape : MonoBehaviour
 {
+    // audio
+
+    [HideInInspector] [System.NonSerialized] public int sampleSize = 1024;
+    [HideInInspector] [System.NonSerialized] public float[] spectrumData;
+
+    private float boost = 0;
+
+    // mesh
+
     public int width = 10;
     public int height = 10;
     public float spacing = 1f;
@@ -25,6 +35,8 @@ public class FlatLandscape : MonoBehaviour
 
     void Start()
     {
+        // mesh
+
         mesh = new Mesh();
         mesh.MarkDynamic(); // Optimizes mesh for frequent updates
         GetComponent<MeshFilter>().mesh = mesh;
@@ -59,6 +71,27 @@ public class FlatLandscape : MonoBehaviour
 
     void Update()
     {
+        // audio
+
+        if (spectrumData == null || spectrumData.Length != sampleSize)
+        {
+            spectrumData = new float[sampleSize];
+        }
+        
+        AudioListener.GetSpectrumData(spectrumData, 0, FFTWindow.BlackmanHarris);
+
+        // Sum the low frequencies (Bass). 
+        // Typically, the first 10-20 bins contain the most "energy" for visual pulse.
+        int bassBoundary = 20;
+        for (int e = 0; e < bassBoundary; e++)
+        {
+            boost += spectrumData[e];
+        }
+
+        boost *= 0.5f;
+
+        // mesh
+
         int v = 0;
         float time = Time.time * driftSpeed;
 
@@ -88,12 +121,15 @@ public class FlatLandscape : MonoBehaviour
 
     void UpdateTriangle(int index, Vector3 p1, Vector3 p2, Vector3 p3)
     {
-        // Ease towards target color
         if (Random.value < 0.003f) targetColors[index] = GetBlueColor();
 
+        // Apply boost to the Lerp result so the flash is immediate
         Color nextColor = Color.Lerp(colors[index], targetColors[index], Time.deltaTime * colorChangeSpeed);
 
-        for (int i = 0; i < 3; i++) colors[index + i] = nextColor;
+        // Add the boost to the color channels (adding to Blue/Green for a glow effect)
+        Color boostedColor = nextColor; //+ new Color(boost * 0.01f, boost * 0.01f, boost * 0.04f);
+
+        for (int i = 0; i < 3; i++) colors[index + i] = boostedColor;
 
         vertices[index] = p1;
         vertices[index + 1] = p2;
