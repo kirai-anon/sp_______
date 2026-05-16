@@ -1168,7 +1168,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &1532534145
 RectTransform:
   m_ObjectHideFlags: 0
@@ -1204,8 +1204,9 @@ MonoBehaviour:
   nodeTemplate: {fileID: 1634038015}
   lineTemplate: {fileID: 511472663}
   currencyText: {fileID: 276900538}
-  treeRadius: 200
-  treeCenter: {x: 0, y: 0}
+  treeRadius: 100
+  treeCenter: {x: 0, y: -200}
+  rotMult: 10
 --- !u!1001 &1634038013
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1452,7 +1453,7 @@ AudioSource:
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
   m_audioClip: {fileID: 0}
-  m_Resource: {fileID: 8300000, guid: 2a506387c85fc4a42bff4266c3ac82d5, type: 3}
+  m_Resource: {fileID: 8300000, guid: ad5288a8540107a4c99b22842db827a1, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 0.69
   m_Pitch: 1

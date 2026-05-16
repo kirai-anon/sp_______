@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
 using TMPro;
+using System.Runtime.CompilerServices;
 
 public class UpgradeTree : MonoBehaviour
 {
@@ -13,21 +14,21 @@ public class UpgradeTree : MonoBehaviour
 
     [Header("Layout")]
     [SerializeField] private float treeRadius = 200f;
-    [SerializeField] private Vector2 treeCenter = Vector2.zero;
+    [SerializeField] private Vector2 treeCenter = new Vector2(0, 0);
 
-    private static readonly Color COL_ACTIVE = new Color(0.2f, 0.8f, 0.2f);
-    private static readonly Color COL_AVAILABLE = new Color(0.8f, 0.8f, 0.2f);
-    private static readonly Color COL_LOCKED = new Color(0.4f, 0.4f, 0.4f);
+    private static readonly Color COL_ACTIVE = new Color(0.1f, 0.2f, 0.1f);
+    private static readonly Color COL_AVAILABLE = new Color(0.2f, 0.2f, 0.1f);
+    private static readonly Color COL_LOCKED = new Color(0.1f, 0.1f, 0.1f);
 
     private List<UpgradeData> upgrades = new List<UpgradeData>
     {
-        new UpgradeData { id = UpgradeId.BulletDamage,      name = "Bullet Damage",    maxLevel = 5, costs = new float[] { 10, 25, 50, 100, 200 }, angle = 0f,                         radius = 200f },
-        new UpgradeData { id = UpgradeId.FireRate,          name = "Fire Rate",        maxLevel = 5, costs = new float[] { 10, 25, 50, 100, 200 }, angle = Mathf.PI / 3f,             radius = 200f },
-        new UpgradeData { id = UpgradeId.LightningDamage,   name = "Lightning Dmg",    maxLevel = 5, costs = new float[] { 30, 60, 120, 240, 480 },angle = 2f * Mathf.PI / 3f,        radius = 200f },
-        new UpgradeData { id = UpgradeId.LightningBounces,  name = "Lightning Bounces",maxLevel = 3, costs = new float[] { 50, 150, 400 },         angle = Mathf.PI,                  radius = 200f },
-        new UpgradeData { id = UpgradeId.PoisonDamagePerSec,name = "Poison Dmg/s",     maxLevel = 5, costs = new float[] { 30, 60, 120, 240, 480 },angle = 4f * Mathf.PI / 3f,        radius = 200f },
-        new UpgradeData { id = UpgradeId.PoisonDuration,    name = "Poison Duration",  maxLevel = 3, costs = new float[] { 40, 100, 250 },         angle = 5f * Mathf.PI / 3f,        radius = 200f },
-        new UpgradeData { id = UpgradeId.CurrencyMultiplier,name = "Currency Mult",    maxLevel = 3, costs = new float[] { 50, 150, 400 },         angle = Mathf.PI / 2f,             radius = 200f },
+        new UpgradeData { id = UpgradeId.BulletDamage,       name = "Bullet Damage",     maxLevel = 5, costs = new float[] { 10, 25, 50, 100, 200 },  angle = 0f,                 radius = 100f },
+        new UpgradeData { id = UpgradeId.FireRate,           name = "Fire Rate",         maxLevel = 5, costs = new float[] { 10, 25, 50, 100, 200 },  angle = Mathf.PI / 3f,      radius = 300f },
+        new UpgradeData { id = UpgradeId.LightningDamage,    name = "Lightning Dmg",     maxLevel = 5, costs = new float[] { 30, 60, 120, 240, 480 }, angle = 2f * Mathf.PI / 3f, radius = 200f },
+        new UpgradeData { id = UpgradeId.LightningBounces,   name = "Lightning Bounces", maxLevel = 3, costs = new float[] { 50, 150, 400 },          angle = Mathf.PI,           radius = 100f },
+        new UpgradeData { id = UpgradeId.PoisonDamagePerSec, name = "Poison Dmg/s",      maxLevel = 5, costs = new float[] { 30, 60, 120, 240, 480 }, angle = 4f * Mathf.PI / 3f, radius = 200f },
+        new UpgradeData { id = UpgradeId.PoisonDuration,     name = "Poison Duration",   maxLevel = 3, costs = new float[] { 40, 100, 250 },          angle = 5f * Mathf.PI / 3f, radius = 300f },
+        new UpgradeData { id = UpgradeId.CurrencyMultiplier, name = "Currency Mult",     maxLevel = 3, costs = new float[] { 50, 150, 400 },          angle = Mathf.PI / 2f,      radius = 100f },
     };
 
     private List<RectTransform> nodeTransforms = new List<RectTransform>();
@@ -38,6 +39,10 @@ public class UpgradeTree : MonoBehaviour
     private bool dragging = false;
     private float currentRotation = 0f;
     private float lastMouseAngle = 0f;
+
+    private float minRotation = Mathf.Infinity;
+    private float maxRotation = Mathf.Infinity;
+    [SerializeField] private float rotMult = 5* Mathf.PI;
 
     void Start()
     {
@@ -56,6 +61,20 @@ public class UpgradeTree : MonoBehaviour
     {
         HandleDrag();
         UpdateCurrencyText();
+
+        if (minRotation == Mathf.Infinity)
+        {
+            minRotation = 0f;
+            maxRotation = 0f;
+
+            for (int i = 0; i < upgrades.Count; i++) // set rotation limits, dynamic
+            {
+                float indexRotation = upgrades[i].angle;
+
+                if (indexRotation < minRotation) minRotation = indexRotation;
+                if (indexRotation > maxRotation) maxRotation = indexRotation;
+            }
+        }
     }
 
     private void HandleDrag()
@@ -76,6 +95,10 @@ public class UpgradeTree : MonoBehaviour
             if (delta > Mathf.PI) delta -= 2f * Mathf.PI;
             if (delta < -Mathf.PI) delta += 2f * Mathf.PI;
             currentRotation += delta;
+
+            if (currentRotation < minRotation * rotMult - rotMult/2) currentRotation = minRotation * rotMult - rotMult/2; Debug.Log("Min: " + (minRotation * rotMult - rotMult/2));
+            if (currentRotation > maxRotation * rotMult - rotMult/2) currentRotation = maxRotation * rotMult - rotMult/2; Debug.Log("Max: " + (maxRotation * rotMult - rotMult/2));
+
             lastMouseAngle = mouseAngle;
             PositionNodes();
         }
@@ -96,8 +119,8 @@ public class UpgradeTree : MonoBehaviour
 
             // 2. Get Components with Explicit Namespaces
             RectTransform rt = node.GetComponent<RectTransform>();
-            UnityEngine.UI.Button btn = node.GetComponentInChildren<UnityEngine.UI.Button>(true);
-            UnityEngine.UI.Image img = node.GetComponentInChildren<UnityEngine.UI.Image>(true);
+            Button btn = node.GetComponentInChildren<Button>(true);
+            Image img = node.GetComponentInChildren<Image>(true);
 
             if (btn == null)
             {
@@ -108,7 +131,7 @@ public class UpgradeTree : MonoBehaviour
             }
 
             // Try getting TMP from children
-            TMPro.TextMeshProUGUI txt = node.GetComponentInChildren<TMPro.TextMeshProUGUI>();
+            TextMeshProUGUI txt = node.GetComponentInChildren<TextMeshProUGUI>();
 
             // 4. Setup Listener
             int index = i;
@@ -137,6 +160,7 @@ public class UpgradeTree : MonoBehaviour
         for (int i = 0; i < upgrades.Count; i++)
         {
             float angle = upgrades[i].angle + currentRotation;
+            angle = Unity.Mathematics.math.tanh(angle)*Mathf.PI/2 + Mathf.PI/2;
             float r = upgrades[i].radius;
             Vector2 pos = treeCenter + new Vector2(Mathf.Cos(angle) * r, Mathf.Sin(angle) * r);
 
