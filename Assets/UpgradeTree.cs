@@ -94,7 +94,7 @@ public class UpgradeTree : MonoBehaviour
             float delta = mouseAngle - lastMouseAngle;
             if (delta > Mathf.PI) delta -= 2f * Mathf.PI;
             if (delta < -Mathf.PI) delta += 2f * Mathf.PI;
-            currentRotation += delta;
+            currentRotation += delta * 3;
 
             if (currentRotation < minRotation * rotMult - rotMult/2) currentRotation = minRotation * rotMult - rotMult/2; Debug.Log("Min: " + (minRotation * rotMult - rotMult/2));
             if (currentRotation > maxRotation * rotMult - rotMult/2) currentRotation = maxRotation * rotMult - rotMult/2; Debug.Log("Max: " + (maxRotation * rotMult - rotMult/2));

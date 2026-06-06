@@ -60,7 +60,7 @@ public class FlatLandscape : MonoBehaviour
         for (int i = 0; i < triCount; i++)
         {
             // We favor lower indices (0-64) because music energy is usually in the bass/mids
-            triangleFrequencyMap[i] = Random.Range(0, 64);
+            triangleFrequencyMap[i] = i;// Random.Range(0, triCount);
 
             int baseIdx = i * 3;
             triangles[baseIdx] = baseIdx;
@@ -92,13 +92,13 @@ public class FlatLandscape : MonoBehaviour
                 Vector3 br = GetDriftedPos(x + 1, y, time);
 
                 // Triangle 1 pulse
-                float pulse1 = spectrum[triangleFrequencyMap[triIndex]] * pulseSensitivity * (1 + triIndex * 0.05f);
+                float pulse1 = spectrum[triangleFrequencyMap[triIndex]] * pulseSensitivity * (0.2f + triIndex * pulseIntensity * 5);
                 UpdateTriangle(v, bl, tl, tr, pulse1);
                 v += 3;
                 triIndex++;
 
                 // Triangle 2 pulse
-                float pulse2 = spectrum[triangleFrequencyMap[triIndex]] * pulseSensitivity * (1 + triIndex * 0.05f);
+                float pulse2 = spectrum[triangleFrequencyMap[triIndex]] * pulseSensitivity * (0.2f + triIndex * pulseIntensity * 5);
                 UpdateTriangle(v, bl, tr, br, pulse2);
                 v += 3;
                 triIndex++;
@@ -137,7 +137,7 @@ public class FlatLandscape : MonoBehaviour
 
     Color GetBlueColor()
     {
-        float s = Random.Range(0.00f, 0.04f);
-        return new Color(s, s, s + s);
+        float s = Random.Range(0.00f, 0.02f);
+        return new Color(s, s, s+s);
     }
 }
