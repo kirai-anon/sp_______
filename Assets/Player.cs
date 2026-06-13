@@ -1,5 +1,7 @@
+using System.Collections;
 using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.Android;
 
 public class Player : MonoBehaviour
 {
@@ -30,32 +32,42 @@ public class Player : MonoBehaviour
 
     void Update()
     {
-        if (invincibleTimer > 0)
+        if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameManager.GameState.Play)
         {
-            invincibleTimer -= Time.deltaTime;
-        }
-        shootTimer += Time.deltaTime;
-
-        if (Input.GetKey(KeyCode.Mouse0))
-        {
-            mouseX = Camera.main.ScreenToWorldPoint(Input.mousePosition).x;
-            mouseX = math.clamp(mouseX, -6.5f, 6.5f);
-
-            if (shootTimer >= GameManager.Instance.fireRate)
+            if (invincibleTimer > 0)
             {
-                Shoot();
-                shootTimer = 0f;
+                invincibleTimer -= Time.deltaTime;
             }
-        }
+            shootTimer += Time.deltaTime;
 
-        Vector3 pos = transform.position;
-        pos.x = Mathf.Lerp(pos.x, mouseX, 0.2f);
-        pos.y = -6.5f;
-        transform.position = pos;
+            if (Input.GetKey(KeyCode.Mouse0))
+            {
+                mouseX = Camera.main.ScreenToWorldPoint(Input.mousePosition).x;
+                mouseX = math.clamp(mouseX, -6.5f, 6.5f);
 
-        if (playerHealth <= 0)
+                if (shootTimer >= GameManager.Instance.fireRate)
+                {
+                    Shoot();
+                    shootTimer = 0f;
+                }
+            }
+
+            Vector3 pos = transform.position;
+            pos.x = Mathf.Lerp(pos.x, mouseX, 0.2f);
+            pos.y = -6.5f;
+            transform.position = pos;
+
+            if (playerHealth <= 0)
+            {
+                Debug.Log("Pdead");
+                if (GameManager.Instance != null)
+                {
+                    GameManager.Instance.ReturnToMenu();
+                }
+            }
+        } else
         {
-            Debug.Log("Pdead");
+            // do nothing
         }
     }
 

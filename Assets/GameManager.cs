@@ -1,9 +1,13 @@
 using UnityEngine;
+using System.Collections;
 using System.Linq;
 
 public class GameManager : MonoBehaviour
 {
-    public static GameManager Instance;
+    public enum GameState { Upgrades, Play }
+    public GameState CurrentState { get; private set; }
+
+    public static GameManager Instance { get; private set; }
     public SaveData save;
 
     // Runtime upgrade values (computed from save)
@@ -20,11 +24,65 @@ public class GameManager : MonoBehaviour
 
     void Awake()
     {
-        if (Instance != null) { Destroy(gameObject); return; }
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
         Instance = this;
         DontDestroyOnLoad(gameObject);
         LoadSave();
         ApplyUpgrades();
+    }
+
+    private void Start()
+    {
+        SetState(GameState.Play);
+    }
+
+    public void SetState(GameState newState)
+    {
+        CurrentState = newState;
+    }
+
+    public void StartRound()
+    {
+        if (!PlayerPrefs.HasKey("Played")) {
+            PlayerPrefs.SetInt("Played", 1);
+            PlayerPrefs.Save();
+        }
+        SetState(GameState.Play);
+    }
+
+    public void ReturnToMenu()
+    {
+        StartCoroutine(SlowDown());
+    }
+
+    private IEnumerator SlowDown()
+    {
+        float duration = 1f; // Target duration in real-time seconds
+        float elapsed = 0f;
+
+        // 1. Smoothly transition Time.timeScale from 1 down to 0 over 1 second
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime; // Track real-world time, not game time
+
+            // Calculate the linear interpolation from 1 to 0
+            Time.timeScale = Mathf.Clamp01(1f - (elapsed / duration));
+
+            yield return null; // Wait for the next frame
+        }
+
+        // Ensure it perfectly hits 0 at the end of the loop
+        Time.timeScale = 0f;
+
+        // 2. Call your state change function
+        SetState(GameState.Upgrades);
+
+        // 3. Instantly reset the game speed back to normal
+        Time.timeScale = 1f;
     }
 
     void LoadSave()

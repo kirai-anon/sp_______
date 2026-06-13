@@ -43,16 +43,16 @@ public class Ball : MonoBehaviour
 
         switch (type)
         {
-            default:                 sides = 12; color = new Color(1f, 0.5f, 0.2f); radius = 1.0f; health = 1;  break; // default: dodecagon
-            case BallType.Tetragon:  sides = 4;  color = new Color(0.2f, 1f, 0.2f); radius = 1.2f; health = 3;  break;
-            case BallType.Pentagon:  sides = 5;  color = new Color(1f, 0.2f, 0.7f); radius = 1.5f; health = 5;  break;
-            case BallType.Octagon:   sides = 8;  color = new Color(1f, 0.2f, 0.2f); radius = 1.5f; health = 8;  break;
-            case BallType.Decagon:   sides = 10; color = new Color(1f, 1f, 0.2f);   radius = 1.5f; health = 10; break;
+            default:                 sides = 12; color = new Color(1f,   0.5f, 0.2f); radius = 1.0f; health = 1;  break; // default: dodecagon
+            case BallType.Tetragon:  sides = 4;  color = new Color(0.4f,   1f, 0.4f); radius = 1.2f; health = 3;  break;
+            case BallType.Pentagon:  sides = 5;  color = new Color(1f,   0.4f, 0.7f); radius = 1.5f; health = 5;  break;
+            case BallType.Octagon:   sides = 8;  color = new Color(1f,   0.4f, 0.4f); radius = 1.5f; health = 8;  break;
+            case BallType.Decagon:   sides = 10; color = new Color(1f,     1f, 0.4f); radius = 1.5f; health = 10; break;
 
             // bosses
-            case BallType.Icotetrasagon:       sides = 20;  color = new Color(1f, 0.7f, 0.3f); radius = 2.0f; health = 24;   break;
-            case BallType.Hexacontatetragon:   sides = 32;  color = new Color(1f, 0.1f, 0.9f); radius = 3.0f; health = 64;   break;
-            case BallType.Chiliaicositetragon: sides = 64;  color = new Color(0.3f, 1f, 1f);   radius = 4.0f; health = 1028; break;
+            case BallType.Icotetrasagon:       sides = 20;  color = new Color(1f,   0.7f, 0.3f); radius = 2.0f; health = 24;   break;
+            case BallType.Hexacontatetragon:   sides = 32;  color = new Color(1f,   0.1f, 0.9f); radius = 3.0f; health = 64;   break;
+            case BallType.Chiliaicositetragon: sides = 64;  color = new Color(0.3f,   1f,   1f); radius = 4.0f; health = 1028; break;
             case BallType.Hexacontapentachiliapentacosiatriacontahexagon: sides = 48; color = new Color(1f, 0.4f, 0.9f); radius = 5.0f; health = 65536; break;
         }
         

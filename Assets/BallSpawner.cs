@@ -9,7 +9,6 @@ public class BallSpawner : MonoBehaviour
     [SerializeField] private float spawnInterval = 1f;
     [SerializeField] private int spawnLimit = 1;
     [SerializeField] private int healthMultiplier = 1;
-    [SerializeField] private bool spawnOnStart = true;
 
     [Header("Spawn Area")]
     [SerializeField] private Vector2 spawnOffset = Vector2.zero;
@@ -36,8 +35,6 @@ public class BallSpawner : MonoBehaviour
 
     void Start()
     {
-        if (spawnOnStart) StartSpawning();
-
         // setup gameplay loop
 
 
@@ -53,30 +50,63 @@ public class BallSpawner : MonoBehaviour
         game.Add(new BallType[] { }); // empty last part
     }
 
-    void Update() {
-        // update physics
-        foreach (Ball ball in balls)
-            ball.UpdatePhysics(Time.deltaTime, gravity, xLim, floorHeight);
-
-        foreach (CurrencyDrop drop in currencyDrops)
-            drop.UpdatePhysics(Time.deltaTime, gravity, xLim, floorHeight);
-
-        if (isSpawning)
+    void Update()
+    {
+        if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameManager.GameState.Play)
         {
-            // utilise gameplay loop unless gameplay list is blank
-            if (game.Count == 0) return;
+            // Update physics safely using regular for-loops
+            for (int i = balls.Count - 1; i >= 0; i--)
+            {
+                if (balls[i] != null)
+                    balls[i].UpdatePhysics(Time.deltaTime, gravity, xLim, floorHeight);
+            }
 
-            // Safety: Only pass the wave if the index is valid.
-            // If waveIndex == game.Count, we pass null or an empty array
-            // because StepGameplay will handle the "CycleComplete" logic anyway.
-            if (waveIndex < game.Count)
+            for (int i = currencyDrops.Count - 1; i >= 0; i--)
             {
-                StepGameplay(game[waveIndex]);
+                if (currencyDrops[i] != null)
+                    currencyDrops[i].UpdatePhysics(Time.deltaTime, gravity, xLim, floorHeight);
             }
-            else
+
+            if (isSpawning)
             {
-                StepGameplay(null); // Triggers the 'isCycleComplete' logic
+                if (game.Count == 0) return;
+
+                if (waveIndex < game.Count)
+                {
+                    StepGameplay(game[waveIndex]);
+                }
+                else
+                {
+                    StepGameplay(null);
+                }
             }
+        }
+        else
+        {
+            // GAME OVER / MENU CLEANUP: Wipe out everything safely using reverse loops
+
+            // 1. Purge all remaining active balls
+            for (int i = balls.Count - 1; i >= 0; i--)
+            {
+                if (balls[i] != null)
+                {
+                    // Assign a truly massive integer value (or call a custom instant kill method)
+                    balls[i].TakeTrueDamage(int.MaxValue);
+                }
+            }
+
+            // 2. Clear out all drifting currency drops from the game space
+            for (int i = currencyDrops.Count - 1; i >= 0; i--)
+            {
+                if (currencyDrops[i] != null)
+                {
+                    Destroy(currencyDrops[i].gameObject);
+                }
+            }
+
+            // 3. Completely empty the lists so references aren't left trailing
+            balls.Clear();
+            currencyDrops.Clear();
         }
     }
 

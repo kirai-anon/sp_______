@@ -60,7 +60,7 @@ public class FlatLandscape : MonoBehaviour
         for (int i = 0; i < triCount; i++)
         {
             // We favor lower indices (0-64) because music energy is usually in the bass/mids
-            triangleFrequencyMap[i] = i;// Random.Range(0, triCount);
+            triangleFrequencyMap[i] = i;
 
             int baseIdx = i * 3;
             triangles[baseIdx] = baseIdx;

@@ -11,6 +11,7 @@ public class UpgradeTree : MonoBehaviour
     [SerializeField] private GameObject nodeTemplate;
     [SerializeField] private GameObject lineTemplate;
     [SerializeField] private TextMeshProUGUI currencyText;
+    [SerializeField] private Button PlayButton;
 
     [Header("Layout")]
     [SerializeField] private float treeRadius = 200f;
@@ -55,6 +56,12 @@ public class UpgradeTree : MonoBehaviour
         CreateNodes(); // This fills nodeTransforms
         CreateLines(); // This fills lineObjects
         UpdateVisuals();
+
+        if (PlayButton != null)
+        {
+            PlayButton.transform.SetAsLastSibling();
+            PlayButton.onClick.AddListener(() => GameManager.Instance.StartRound());
+        }
     }
 
     void Update()
@@ -94,10 +101,14 @@ public class UpgradeTree : MonoBehaviour
             float delta = mouseAngle - lastMouseAngle;
             if (delta > Mathf.PI) delta -= 2f * Mathf.PI;
             if (delta < -Mathf.PI) delta += 2f * Mathf.PI;
-            currentRotation += delta * 3;
 
-            if (currentRotation < minRotation * rotMult - rotMult/2) currentRotation = minRotation * rotMult - rotMult/2; Debug.Log("Min: " + (minRotation * rotMult - rotMult/2));
-            if (currentRotation > maxRotation * rotMult - rotMult/2) currentRotation = maxRotation * rotMult - rotMult/2; Debug.Log("Max: " + (maxRotation * rotMult - rotMult/2));
+            currentRotation += delta * 3f;
+
+            // FIX: Clean, un-broken rotation boundaries based on tree bounds
+            float padding = -0.3f; // Extra room to scroll past the first/last node
+            float minClamp = -maxRotation - padding;
+            float maxClamp = -minRotation + padding;
+            currentRotation = Mathf.Clamp(currentRotation, minClamp, maxClamp);
 
             lastMouseAngle = mouseAngle;
             PositionNodes();

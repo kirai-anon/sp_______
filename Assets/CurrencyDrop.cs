@@ -28,25 +28,25 @@ public class CurrencyDrop : MonoBehaviour
     {
         if (collected) return;
 
+        velocity.x *= 0.9f;
         velocity.y -= gravity * dt;
 
         Vector3 pos = transform.position;
         pos.x += velocity.x * dt;
         pos.y += velocity.y * dt;
 
-        // Wall collision (no bounce, just stop)
+        // Wall collision
         if (Mathf.Abs(pos.x) > xLim - radius)
         {
             pos.x = Mathf.Sign(pos.x) * (xLim - radius);
-            velocity.x = 0;
+            velocity.x *= -0.5f;
         }
 
-        // Floor collision (no bounce, just stop)
+        // Floor collision
         if (pos.y < floorHeight + radius)
         {
             pos.y = floorHeight + radius;
-            velocity.y = 0;
-            velocity.x = 0; // Stop sliding too
+            velocity.y = -0.5f;
         }
 
         transform.position = pos;
