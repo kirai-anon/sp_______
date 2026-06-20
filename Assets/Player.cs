@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Threading;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Android;
@@ -63,6 +64,7 @@ public class Player : MonoBehaviour
                 if (GameManager.Instance != null)
                 {
                     GameManager.Instance.ReturnToMenu();
+                    ResetPlayer();
                 }
             }
         } else

@@ -23,8 +23,7 @@ public class UpgradeData
 {
     public UpgradeId id;
     public string name;
-    public int maxLevel;
-    public float[] costs;
+    public int cost;
     public float angle;   // Radians
     public float radius;
 }

@@ -2,12 +2,12 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
 using TMPro;
-using System.Runtime.CompilerServices;
 
 public class UpgradeTree : MonoBehaviour
 {
     [Header("UI")]
     [SerializeField] private Canvas canvas;
+    [SerializeField] private RectTransform upgradesContainer;
     [SerializeField] private GameObject nodeTemplate;
     [SerializeField] private GameObject lineTemplate;
     [SerializeField] private TextMeshProUGUI currencyText;
@@ -23,15 +23,16 @@ public class UpgradeTree : MonoBehaviour
 
     private List<UpgradeData> upgrades = new List<UpgradeData>
     {
-        new UpgradeData { id = UpgradeId.BulletDamage,       name = "Bullet Damage",     maxLevel = 5, costs = new float[] { 10, 25, 50, 100, 200 },  angle = 0f,                 radius = 100f },
-        new UpgradeData { id = UpgradeId.FireRate,           name = "Fire Rate",         maxLevel = 5, costs = new float[] { 10, 25, 50, 100, 200 },  angle = Mathf.PI / 3f,      radius = 300f },
-        new UpgradeData { id = UpgradeId.LightningDamage,    name = "Lightning Dmg",     maxLevel = 5, costs = new float[] { 30, 60, 120, 240, 480 }, angle = 2f * Mathf.PI / 3f, radius = 200f },
-        new UpgradeData { id = UpgradeId.LightningBounces,   name = "Lightning Bounces", maxLevel = 3, costs = new float[] { 50, 150, 400 },          angle = Mathf.PI,           radius = 100f },
-        new UpgradeData { id = UpgradeId.PoisonDamagePerSec, name = "Poison Dmg/s",      maxLevel = 5, costs = new float[] { 30, 60, 120, 240, 480 }, angle = 4f * Mathf.PI / 3f, radius = 200f },
-        new UpgradeData { id = UpgradeId.PoisonDuration,     name = "Poison Duration",   maxLevel = 3, costs = new float[] { 40, 100, 250 },          angle = 5f * Mathf.PI / 3f, radius = 300f },
-        new UpgradeData { id = UpgradeId.CurrencyMultiplier, name = "Currency Mult",     maxLevel = 3, costs = new float[] { 50, 150, 400 },          angle = Mathf.PI / 2f,      radius = 100f },
+        new UpgradeData { id = UpgradeId.BulletDamage,       name = "Bullet Damage",      cost = 10,  angle = 0f,                 radius = 100f },
+        new UpgradeData { id = UpgradeId.FireRate,           name = "Fire Rate",          cost = 10,  angle = Mathf.PI / 3f,      radius = 300f },
+        new UpgradeData { id = UpgradeId.LightningDamage,    name = "Lightning Dmg",      cost = 30,  angle = 2f * Mathf.PI / 3f, radius = 200f },
+        new UpgradeData { id = UpgradeId.LightningBounces,   name = "Lightning Bounces", cost = 50,  angle = Mathf.PI,            radius = 100f },
+        new UpgradeData { id = UpgradeId.PoisonDamagePerSec, name = "Poison Dmg/s",       cost = 30,  angle = 4f * Mathf.PI / 3f, radius = 200f },
+        new UpgradeData { id = UpgradeId.PoisonDuration,     name = "Poison Duration",   cost = 40,  angle = 5f * Mathf.PI / 3f, radius = 300f },
+        new UpgradeData { id = UpgradeId.CurrencyMultiplier, name = "Currency Mult",      cost = 50,  angle = Mathf.PI / 2f,      radius = 100f },
     };
 
+    // FIX: Changed type from Button to RectTransform
     private List<RectTransform> nodeTransforms = new List<RectTransform>();
     private List<Image> nodeImages = new List<Image>();
     private List<TextMeshProUGUI> nodeTexts = new List<TextMeshProUGUI>();
@@ -43,43 +44,81 @@ public class UpgradeTree : MonoBehaviour
 
     private float minRotation = Mathf.Infinity;
     private float maxRotation = Mathf.Infinity;
-    [SerializeField] private float rotMult = 5* Mathf.PI;
+    [SerializeField] private float rotMult = 5 * Mathf.PI;
 
     void Start()
     {
-        // Clear lists just in case of a hot-reload bug
         nodeTransforms.Clear();
         nodeImages.Clear();
         nodeTexts.Clear();
         lineObjects.Clear();
 
-        CreateNodes(); // This fills nodeTransforms
-        CreateLines(); // This fills lineObjects
+
+        CreateLines();
+        CreateNodes();
         UpdateVisuals();
 
         if (PlayButton != null)
         {
-            PlayButton.transform.SetAsLastSibling();
+            PlayButton.onClick.RemoveAllListeners();
             PlayButton.onClick.AddListener(() => GameManager.Instance.StartRound());
+            PlayButton.transform.SetAsLastSibling();
         }
     }
 
     void Update()
     {
-        HandleDrag();
-        UpdateCurrencyText();
+        // FIX: Handle Dynamic Visibility States
+        HandleVisibility();
 
-        if (minRotation == Mathf.Infinity)
+        // Only allow dragging and math processing if the upgrades are active/visible
+        if (upgradesContainer != null && upgradesContainer.gameObject.activeSelf)
         {
-            minRotation = 0f;
-            maxRotation = 0f;
+            HandleDrag();
+            UpdateCurrencyText();
 
-            for (int i = 0; i < upgrades.Count; i++) // set rotation limits, dynamic
+            if (minRotation == Mathf.Infinity)
             {
-                float indexRotation = upgrades[i].angle;
+                minRotation = 0f;
+                maxRotation = 0f;
+                for (int i = 0; i < upgrades.Count; i++)
+                {
+                    float indexRotation = upgrades[i].angle;
+                    if (indexRotation < minRotation) minRotation = indexRotation;
+                    if (indexRotation > maxRotation) maxRotation = indexRotation;
+                }
+            }
+        }
+    }
 
-                if (indexRotation < minRotation) minRotation = indexRotation;
-                if (indexRotation > maxRotation) maxRotation = indexRotation;
+    private void HandleVisibility()
+    {
+        if (GameManager.Instance == null || upgradesContainer == null || PlayButton == null) return;
+
+        var currentState = GameManager.Instance.CurrentState;
+
+        // 1. Check GameState Conditions
+        if (currentState == GameManager.GameState.Play)
+        {
+            upgradesContainer.gameObject.SetActive(false);
+            PlayButton.gameObject.SetActive(false);
+            if (currencyText != null) currencyText.gameObject.SetActive(false);
+        }
+        else if (currentState == GameManager.GameState.Upgrades)
+        {
+            // Play Button always shows during Upgrades state
+            PlayButton.gameObject.SetActive(true);
+
+            // 2. FIX: Check "Played" Key. If player hasn't played yet, hide the tree elements.
+            if (!PlayerPrefs.HasKey("Played"))
+            {
+                upgradesContainer.gameObject.SetActive(false);
+                if (currencyText != null) currencyText.gameObject.SetActive(false);
+            }
+            else
+            {
+                upgradesContainer.gameObject.SetActive(true);
+                if (currencyText != null) currencyText.gameObject.SetActive(true);
             }
         }
     }
@@ -103,12 +142,7 @@ public class UpgradeTree : MonoBehaviour
             if (delta < -Mathf.PI) delta += 2f * Mathf.PI;
 
             currentRotation += delta * 3f;
-
-            // FIX: Clean, un-broken rotation boundaries based on tree bounds
-            float padding = -0.3f; // Extra room to scroll past the first/last node
-            float minClamp = -maxRotation - padding;
-            float maxClamp = -minRotation + padding;
-            currentRotation = Mathf.Clamp(currentRotation, minClamp, maxClamp);
+            currentRotation = currentRotation % 360;
 
             lastMouseAngle = mouseAngle;
             PositionNodes();
@@ -117,45 +151,31 @@ public class UpgradeTree : MonoBehaviour
 
     private void CreateNodes()
     {
-        // Clear lists to prevent index mismatch
-        nodeTransforms.Clear();
-        nodeImages.Clear();
-        nodeTexts.Clear();
+        // FIX: Spawns inside upgradesContainer instead of canvas root
+        Transform parent = upgradesContainer != null ? upgradesContainer : canvas.transform;
 
         for (int i = 0; i < upgrades.Count; i++)
         {
-            // 1. Instantiate
-            GameObject node = Instantiate(nodeTemplate, canvas.transform);
+            GameObject node = Instantiate(nodeTemplate, parent);
             node.SetActive(true);
 
-            // 2. Get Components with Explicit Namespaces
-            RectTransform rt = node.GetComponent<RectTransform>();
-            Button btn = node.GetComponentInChildren<Button>(true);
-            Image img = node.GetComponentInChildren<Image>(true);
+            RectTransform rectTrans = node.GetComponent<RectTransform>();
+            Button btn = node.GetComponent<Button>();
+            Image img = node.GetComponent<Image>();
 
-            if (btn == null)
-            {
-                // If this still hits, the component is fundamentally not 
-                // reachable on this GameObject or any of its children.
-                Debug.LogError($"CRITICAL: Node {i} has no Button in root or children!");
-                continue;
-            }
+            if (btn == null || rectTrans == null) continue;
 
-            // Try getting TMP from children
             TextMeshProUGUI txt = node.GetComponentInChildren<TextMeshProUGUI>();
 
-            // 4. Setup Listener
             int index = i;
-            btn.onClick.RemoveAllListeners(); // Clean slate
+            btn.onClick.RemoveAllListeners();
             btn.onClick.AddListener(() => TryBuy(index));
 
-            // 5. Data Initialization
             var upd = upgrades[i];
             int lvl = GameManager.Instance.save.GetLevel(upd.id);
-            if (txt != null) txt.text = $"{upd.name}\nLv {lvl}/{upd.maxLevel}";
+            if (txt != null) txt.text = $"{upd.name}\nLv {lvl}";
 
-            // 6. Add to Lists
-            nodeTransforms.Add(rt);
+            nodeTransforms.Add(rectTrans);
             nodeImages.Add(img);
             nodeTexts.Add(txt);
         }
@@ -164,18 +184,16 @@ public class UpgradeTree : MonoBehaviour
 
     private void PositionNodes()
     {
-        // SAFETY CHECK: If the list isn't ready, don't try to position anything
         if (nodeTransforms == null || nodeTransforms.Count < upgrades.Count)
             return;
 
         for (int i = 0; i < upgrades.Count; i++)
         {
             float angle = upgrades[i].angle + currentRotation;
-            angle = Unity.Mathematics.math.tanh(angle)*Mathf.PI/2 + Mathf.PI/2;
             float r = upgrades[i].radius;
             Vector2 pos = treeCenter + new Vector2(Mathf.Cos(angle) * r, Mathf.Sin(angle) * r);
 
-            // This is where the crash was happening
+            // FIX: This now correctly applies to RectTransform
             nodeTransforms[i].anchoredPosition = pos;
         }
         UpdateLines();
@@ -183,9 +201,12 @@ public class UpgradeTree : MonoBehaviour
 
     private void CreateLines()
     {
+        // FIX: Spawns inside upgradesContainer instead of canvas root
+        Transform parent = upgradesContainer != null ? upgradesContainer : canvas.transform;
+
         for (int i = 0; i < upgrades.Count; i++)
         {
-            GameObject line = Instantiate(lineTemplate, canvas.transform);
+            GameObject line = Instantiate(lineTemplate, parent);
             line.SetActive(true);
             lineObjects.Add(line);
         }
@@ -193,10 +214,15 @@ public class UpgradeTree : MonoBehaviour
 
     private void UpdateLines()
     {
+        // Prevent execution if nodes haven't been generated yet
+        if (nodeTransforms.Count < upgrades.Count || lineObjects.Count < upgrades.Count) return;
+
         for (int i = 0; i < upgrades.Count; i++)
         {
             RectTransform lineRT = lineObjects[i].GetComponent<RectTransform>();
             Vector2 start = treeCenter;
+
+            // FIX: Safely reads the anchoredPosition from the RectTransform list
             Vector2 end = nodeTransforms[i].anchoredPosition;
 
             Vector2 diff = end - start;
@@ -218,26 +244,25 @@ public class UpgradeTree : MonoBehaviour
 
     private void UpdateVisuals()
     {
+        UpdateLines();
         for (int i = 0; i < upgrades.Count; i++)
         {
             var upd = upgrades[i];
             int lvl = GameManager.Instance.save.GetLevel(upd.id);
 
-            if (lvl >= upd.maxLevel) nodeImages[i].color = COL_ACTIVE;
-            else if (CanBuy(i)) nodeImages[i].color = COL_AVAILABLE;
+            if (CanBuy(i)) nodeImages[i].color = COL_AVAILABLE;
+            else if (lvl > 0) nodeImages[i].color = COL_ACTIVE;
             else nodeImages[i].color = COL_LOCKED;
 
-            nodeTexts[i].text = $"{upd.name}\nLv {lvl}/{upd.maxLevel}";
+            nodeTexts[i].text = $"{upd.name}\nLv {lvl}";
         }
-        UpdateLines();
     }
 
     private bool CanBuy(int index)
     {
         var upd = upgrades[index];
         int lvl = GameManager.Instance.save.GetLevel(upd.id);
-        if (lvl >= upd.maxLevel) return false;
-        return GameManager.Instance.save.currency >= upd.costs[lvl];
+        return GameManager.Instance.save.currency >= upd.cost * Mathf.Pow(2, lvl);
     }
 
     private void TryBuy(int index)
@@ -247,7 +272,7 @@ public class UpgradeTree : MonoBehaviour
         var upd = upgrades[index];
         int lvl = GameManager.Instance.save.GetLevel(upd.id);
 
-        GameManager.Instance.save.currency -= upd.costs[lvl];
+        GameManager.Instance.save.currency -= upd.cost * Mathf.Pow(2, lvl);
         GameManager.Instance.save.SetLevel(upd.id, lvl + 1);
 
         GameManager.Instance.SaveGame();

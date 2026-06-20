@@ -25,7 +25,6 @@ public class BallSpawner : MonoBehaviour
     [SerializeField] private AudioClip[] ballSounds;
 
     private float timer;
-    private bool isSpawning;
     public List<Ball> balls = new List<Ball>();
 
     public List<CurrencyDrop> currencyDrops = new List<CurrencyDrop>();
@@ -67,18 +66,15 @@ public class BallSpawner : MonoBehaviour
                     currencyDrops[i].UpdatePhysics(Time.deltaTime, gravity, xLim, floorHeight);
             }
 
-            if (isSpawning)
-            {
-                if (game.Count == 0) return;
+            if (game.Count == 0) return;
 
-                if (waveIndex < game.Count)
-                {
-                    StepGameplay(game[waveIndex]);
-                }
-                else
-                {
-                    StepGameplay(null);
-                }
+            if (waveIndex < game.Count)
+            {
+                StepGameplay(game[waveIndex]);
+            }
+            else
+            {
+                StepGameplay(null);
             }
         }
         else
@@ -210,9 +206,6 @@ public class BallSpawner : MonoBehaviour
     {
         currencyDrops.Remove(drop);
     }
-
-    public void StartSpawning() { isSpawning = true; timer = 0f; }
-    public void StopSpawning() { isSpawning = false; }
 
     void OnDrawGizmosSelected()
     {

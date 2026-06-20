@@ -4,7 +4,7 @@ using System.Collections.Generic;
 public class Bullet : MonoBehaviour
 {
     [SerializeField] private float speed = 20f;
-    
+
     private int damage;
     private int lightningDamage;
     private int lightningBounces;
@@ -35,16 +35,13 @@ public class Bullet : MonoBehaviour
         if (!other.TryGetComponent<Ball>(out Ball ball)) return;
         hasHit = true;
 
-        // Normal damage
         ball.TakeDamage(damage);
 
-        // Lightning
         if (lightningBounces > 0 && lightningDamage > 0)
         {
             TriggerLightning(ball);
         }
 
-        // Poison
         if (poisonDuration > 0 && poisonDamagePerSec > 0)
         {
             ball.ApplyPoison(poisonDamagePerSec, poisonDuration);
@@ -57,7 +54,10 @@ public class Bullet : MonoBehaviour
     {
         List<Ball> hit = new List<Ball> { firstBall };
         Ball current = firstBall;
-        int totalHits = 1 + lightningBounces; // first ball + bounces
+        int totalHits = 1 + lightningBounces;
+
+        // Keep track of positions for our continuous line
+        List<Vector3> lightningPositions = new List<Vector3> { firstBall.transform.position };
 
         for (int i = 1; i < totalHits; i++)
         {
@@ -77,34 +77,44 @@ public class Bullet : MonoBehaviour
 
             if (nearest == null) break;
 
-            // Draw lightning line
-            DrawLightningLine(current.transform.position, nearest.transform.position);
-
             nearest.TakeTrueDamage(lightningDamage);
 
-            // Apply poison to chained balls too
             if (poisonDuration > 0 && poisonDamagePerSec > 0)
                 nearest.ApplyPoison(poisonDamagePerSec, poisonDuration);
+
+            // Record the next point in the lightning chain
+            lightningPositions.Add(nearest.transform.position);
 
             hit.Add(nearest);
             current = nearest;
         }
+
+        // Draw the entire continuous lightning path at once
+        if (lightningPositions.Count > 1)
+        {
+            DrawContinuousLightning(lightningPositions);
+        }
     }
 
-    private void DrawLightningLine(Vector3 start, Vector3 end)
+    private void DrawContinuousLightning(List<Vector3> positions)
     {
-        GameObject lineObj = new GameObject("LightningLine");
-        LineRenderer lr = lineObj.AddComponent<LineRenderer>();
-        lr.positionCount = 2;
-        lr.SetPosition(0, start);
-        lr.SetPosition(1, end);
+        GameObject lightningObj = new GameObject("ContinuousLightning");
+        LineRenderer lr = lightningObj.AddComponent<LineRenderer>();
+
+        // Set the points to match our recorded chain length
+        lr.positionCount = positions.Count;
+        lr.SetPositions(positions.ToArray());
+
+        // Styling
         lr.startWidth = 0.05f;
         lr.endWidth = 0.05f;
-        lr.material = new Material(Shader.Find("Sprites-Default"));
-        lr.material.color = new Color(0.6f, 0.8f, 1f);
         lr.useWorldSpace = true;
 
-        // Auto-destroy after a short time
-        Destroy(lineObj, 0.15f);
+        // Fix the deletion bug: Use a simple mobile or unlit material to avoid leaking material instances
+        lr.material = new Material(Shader.Find("Sprites/Default"));
+        lr.material.color = new Color(0.4f, 0.8f, 1f);
+
+        // This will cleanly delete the entire chain after 0.15 seconds
+        Destroy(lightningObj, 0.15f);
     }
 }
