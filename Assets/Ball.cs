@@ -1,10 +1,5 @@
 using UnityEngine;
 using System.Collections.Generic;
-using System.Collections;
-using static UnityEngine.ParticleSystem;
-using System;
-using Unity.Mathematics;
-using Unity.VisualScripting;
 
 public class Ball : MonoBehaviour
 {

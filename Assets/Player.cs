@@ -1,17 +1,14 @@
-using System.Collections;
-using System.Threading;
 using Unity.Mathematics;
 using UnityEngine;
-using UnityEngine.Android;
 
 public class Player : MonoBehaviour
 {
     [SerializeField] private GameObject bulletPrefab;
     [SerializeField] private BallSpawner ballSpawner;
 
-    [SerializeField] public float initPlayerHealth = 10;
+    [SerializeField] public float initPlayerHealth = 1;
     
-    public float playerHealth = 10;
+    public float playerHealth = 1;
     private float invincibleTimer;
 
     [SerializeField] private AudioClip shootSound;
@@ -64,12 +61,12 @@ public class Player : MonoBehaviour
                 if (GameManager.Instance != null)
                 {
                     GameManager.Instance.ReturnToMenu();
-                    ResetPlayer();
                 }
             }
-        } else
+        }
+        else
         {
-            // do nothing
+            ResetPlayer();
         }
     }
 

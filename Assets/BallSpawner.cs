@@ -1,7 +1,5 @@
 using UnityEngine;
 using System.Collections.Generic;
-using Unity.VisualScripting;
-using System.Runtime.CompilerServices;
 
 public class BallSpawner : MonoBehaviour
 {
@@ -103,6 +101,10 @@ public class BallSpawner : MonoBehaviour
             // 3. Completely empty the lists so references aren't left trailing
             balls.Clear();
             currencyDrops.Clear();
+
+            healthMultiplier = 1;
+            spawnLimit = 1;
+            waveIndex = 0;
         }
     }
 

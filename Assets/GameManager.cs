@@ -1,6 +1,5 @@
 using UnityEngine;
 using System.Collections;
-using System.Linq;
 
 public class GameManager : MonoBehaviour
 {
@@ -61,7 +60,7 @@ public class GameManager : MonoBehaviour
 
     private IEnumerator SlowDown()
     {
-        float duration = 1f; // Target duration in real-time seconds
+        float duration = 2f; // Target duration in real-time seconds
         float elapsed = 0f;
 
         // 1. Smoothly transition Time.timeScale from 1 down to 0 over 1 second
@@ -88,7 +87,7 @@ public class GameManager : MonoBehaviour
     void LoadSave()
     {
         string json = PlayerPrefs.GetString("GameSave", "");
-        if (!string.IsNullOrEmpty(json))
+        if (1==0 && !string.IsNullOrEmpty(json))
         {
             save = JsonUtility.FromJson<SaveData>(json);
             // Important: Rebuild the internal dictionary from the loaded list

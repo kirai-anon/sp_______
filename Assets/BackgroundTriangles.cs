@@ -1,9 +1,10 @@
 using UnityEngine;
-using UnityEngine.Tilemaps;
 
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
 public class FlatLandscape : MonoBehaviour
 {
+    [SerializeField] public AudioSource targetMusicSource;
+
     public int width = 10;
     public int height = 10;
     public float spacing = 1f;
@@ -76,7 +77,10 @@ public class FlatLandscape : MonoBehaviour
     void Update()
     {
         // 1. Get the latest audio data
-        AudioListener.GetSpectrumData(spectrum, 0, FFTWindow.BlackmanHarris);
+        if (targetMusicSource != null)
+        {
+            targetMusicSource.GetSpectrumData(spectrum, 0, FFTWindow.BlackmanHarris);
+        }
 
         int v = 0;
         int triIndex = 0;
