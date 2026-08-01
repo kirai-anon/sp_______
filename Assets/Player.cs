@@ -15,6 +15,10 @@ public class Player : MonoBehaviour
 
     private float shootTimer;
 
+    [SerializeField] private GameObject body;
+
+    private float wobbleTimer;
+
     float mouseX = 0;
 
     void Start()
@@ -24,7 +28,7 @@ public class Player : MonoBehaviour
 
     public void ResetPlayer()
     {
-        playerHealth = initPlayerHealth;
+        playerHealth = GameManager.Instance.playerHealth;
         mouseX = 0;
     }
 
@@ -32,35 +36,47 @@ public class Player : MonoBehaviour
     {
         if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameManager.GameState.Play)
         {
-            if (invincibleTimer > 0)
+            if (playerHealth > 0f)
             {
-                invincibleTimer -= Time.deltaTime;
-            }
-            shootTimer += Time.deltaTime;
-
-            if (Input.GetKey(KeyCode.Mouse0))
-            {
-                mouseX = Camera.main.ScreenToWorldPoint(Input.mousePosition).x;
-                mouseX = math.clamp(mouseX, -6.5f, 6.5f);
-
-                if (shootTimer >= GameManager.Instance.fireRate)
+                if (invincibleTimer > 0f)
                 {
-                    Shoot();
-                    shootTimer = 0f;
+                    invincibleTimer -= Time.deltaTime;
+                }
+                shootTimer += Time.deltaTime;
+
+                if (Input.GetKey(KeyCode.Mouse0))
+                {
+                    mouseX = Camera.main.ScreenToWorldPoint(Input.mousePosition).x;
+                    mouseX = math.clamp(mouseX, -5.7f, 5.7f);
+
+                    if (shootTimer >= GameManager.Instance.fireRate)
+                    {
+                        Shoot();
+                        shootTimer = 0f;
+                    }
+
+                    wobbleTimer += Time.deltaTime;
+                    wobbleTimer %= math.PI * 2;
+                    body.transform.position =
+                        new Vector3(
+                            transform.position.x,
+                            transform.position.y + math.cos(wobbleTimer * 29) * 0.13f,
+                            transform.position.z
+                        );
+                }
+                else
+                {
+                    wobbleTimer *= 0.8f;
                 }
             }
 
-            Vector3 pos = transform.position;
-            pos.x = Mathf.Lerp(pos.x, mouseX, 0.2f);
-            pos.y = -6.5f;
-            transform.position = pos;
-
-            if (playerHealth <= 0)
+            if (playerHealth <= 0f)
             {
                 Debug.Log("Pdead");
                 if (GameManager.Instance != null)
                 {
                     GameManager.Instance.ReturnToMenu();
+                    playerHealth = 0.001f;
                 }
             }
         }
@@ -68,11 +84,16 @@ public class Player : MonoBehaviour
         {
             ResetPlayer();
         }
+
+        Vector3 pos = transform.position;
+        pos.x = Mathf.Lerp(pos.x, mouseX, 0.2f);
+        pos.y = -6f;
+        transform.position = pos;
     }
 
     private void Shoot()
     {
-        GameObject bullet = Instantiate(bulletPrefab, transform.position, Quaternion.identity);
+        GameObject bullet = Instantiate(bulletPrefab, transform.position + new Vector3(0, 0.2f, 0), Quaternion.identity);
         bullet.GetComponent<Bullet>().Initialize(
             GameManager.Instance.bulletDamage,
             GameManager.Instance.lightningDamage,
@@ -87,11 +108,11 @@ public class Player : MonoBehaviour
 
     void OnTriggerEnter2D(Collider2D other)
     {
-        if (!other.TryGetComponent<Ball>(out Ball ball)) return;
+        if (!other.TryGetComponent<Ball>(out _)) return;
         if (invincibleTimer > 0) return;
         
         Debug.Log("Pdamage");
-        playerHealth -= 1;
-        invincibleTimer = 1;
+        playerHealth -= 1f;
+        invincibleTimer = 0.3f;
     }
 }

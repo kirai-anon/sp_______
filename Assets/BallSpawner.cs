@@ -12,6 +12,9 @@ public class BallSpawner : MonoBehaviour
     [SerializeField] private Vector2 spawnOffset = Vector2.zero;
     [SerializeField] private float spawnRadius = 0f;
 
+    [Header("Rift Settings")]
+    [SerializeField] private GameObject riftPrefab;
+
     [Header("Ball Appearance")]
     [SerializeField] private int resolution = 64;
 
@@ -98,18 +101,19 @@ public class BallSpawner : MonoBehaviour
                 }
             }
 
-            // 3. Completely empty the lists so references aren't left trailing
-            balls.Clear();
-            currencyDrops.Clear();
-
             healthMultiplier = 1;
             spawnLimit = 1;
             waveIndex = 0;
         }
     }
 
+    private bool isRiftActive = false; // Add this tracking flag at the class level
+
     private void StepGameplay(BallType[] wave)
     {
+        // 1. CRITICAL LOCK: If a rift is currently growing or shrinking, stop everything here
+        if (isRiftActive) return;
+
         void NextWave()
         {
             waveIndex = 0;
@@ -117,51 +121,77 @@ public class BallSpawner : MonoBehaviour
             spawnLimit += 1;
         }
 
-        // Check if we are currently "waiting" to reset the cycle
         bool isCycleComplete = (waveIndex >= game.Count);
 
         if (isCycleComplete)
         {
-            // WAIT here until the player has cleared enough balls 
-            // to actually allow the NEW spawnLimit to take effect
             if (balls.Count < spawnLimit)
             {
                 NextWave();
-                // The next frame will now proceed to the 'else' block below
             }
             return;
         }
-        
-        // Normal Spawning Logic
+
         if (balls.Count < spawnLimit)
         {
             timer += Time.deltaTime;
 
             if (timer >= spawnInterval)
             {
-                if (waveIndex != game.Count - 1) {
-                    for (int i = 0; i < wave.Length; i++)
-                    {
-                        SpawnBall(wave[i]);
-                    }
+                // 2. Turn on the lock before creating the rift
+                isRiftActive = true;
+
+                Vector2 spawnPos = (Vector2)transform.position + new Vector2(Random.Range(-xLim + 3, xLim - 3), Random.Range(0, -floorHeight - 1));
+
+                GameObject riftObj = Instantiate(riftPrefab, new Vector3(spawnPos.x, spawnPos.y, 1), Quaternion.identity);
+                RiftEffect rift = riftObj.GetComponent<RiftEffect>();
+
+                if (wave.Length > 0)
+                {
+                    // 3. We pass a second callback to unlock the spawner when the rift finishes shrinking
+                    StartCoroutine(rift.RunRiftAnimation(
+                        () => {
+                            for (int i = 0; i < wave.Length; i++)
+                            {
+                                SpawnBall(wave[i], spawnPos);
+                            }
+                        },
+                        () => { isRiftActive = false; } // Unlock callback
+                    ));
 
                     timer = 0f;
                     waveIndex += 1;
-                    // After this, waveIndex might equal game.Count, 
-                    // triggering the 'isCycleComplete' check on the next frame.
                 }
                 else
                 {
                     switch (healthMultiplier)
                     {
-                        default: timer = spawnInterval; break;
-                        case >= 64: goto Case4;
-                        case >= 32: Case4: SpawnBall(BallType.Hexacontapentachiliapentacosiatriacontahexagon); goto Case3;
-                        case >= 16: Case3: SpawnBall(BallType.Chiliaicositetragon); goto Case2;
-                        case >= 8: Case2: SpawnBall(BallType.Hexacontatetragon); goto Case1;
-                        case >= 4: Case1: SpawnBall(BallType.Icotetrasagon); break;
+                        case < 4:
+                            {
+                                NextWave();
+                                isRiftActive = false;
+                                break;
+                            }
+                        case >= 4:
+                            {
+                                StartCoroutine(rift.RunRiftAnimation(
+                                    () =>
+                                    {
+                                        switch (healthMultiplier)
+                                        {
+                                            case >= 32: goto Case4;
+                                            case >= 16: Case4: SpawnBall(BallType.Hexacontapentachiliapentacosiatriacontahexagon, spawnPos); goto Case3;
+                                            case >= 8: Case3: SpawnBall(BallType.Chiliaicositetragon, spawnPos); goto Case2;
+                                            case >= 4: Case2: SpawnBall(BallType.Hexacontatetragon, spawnPos); break;
+                                        }
+                                    },
+                                    () => { isRiftActive = false; } // Unlock callback
+                                ));
+
+                                NextWave();
+                                break;
+                            }
                     }
-                    NextWave(); // kind of forgot this needs to be used by every switch
                 }
             }
         }
@@ -171,12 +201,9 @@ public class BallSpawner : MonoBehaviour
         }
     }
 
-    public GameObject SpawnBall(BallType type)
-    {
-        Vector2 spawnPos = (Vector2)transform.position + spawnOffset;
-        if (spawnRadius > 0)
-            spawnPos += Random.insideUnitCircle * spawnRadius;
 
+    public GameObject SpawnBall(BallType type, Vector2 spawnPos)
+    {
         GameObject ballObj = new GameObject($"Ball_{type}");
         ballObj.transform.position = spawnPos;
 

@@ -13,7 +13,7 @@ public enum BallType
 public enum UpgradeId
 {
     BulletDamage, FireRate, LightningDamage, LightningBounces,
-    PoisonDamagePerSec, PoisonDuration, CurrencyMultiplier
+    PoisonDamagePerSec, PoisonDuration, CurrencyMultiplier, PlayerHealth
 }
 
 [Serializable]
@@ -22,8 +22,8 @@ public class UpgradeData
     public UpgradeId id;
     public string name;
     public int cost;
-    public float angle;   // Radians
-    public float radius;
+    public float x;
+    public float y;
 }
 
 // --- SERIALIZATION HELPERS ---

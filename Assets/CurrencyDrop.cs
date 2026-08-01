@@ -28,7 +28,7 @@ public class CurrencyDrop : MonoBehaviour
     {
         if (collected) return;
 
-        velocity.x *= 0.9f;
+        velocity.x *= 0.98f;
         velocity.y -= gravity * dt;
 
         Vector3 pos = transform.position;

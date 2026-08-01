@@ -29,6 +29,9 @@ public class Ball : MonoBehaviour
 
     private AudioClip[] audioClips;
 
+    private Coroutine spawnScaleCoroutine;
+    private float spawnScaleDuration = 0.1f;
+
     public void Initialize(BallType ballType, int resolution, BallSpawner ballSpawner, int hpMult, AudioClip[] ballSounds)
     {
         type = ballType;
@@ -89,6 +92,8 @@ public class Ball : MonoBehaviour
         // Velocity
         velocity = new Vector2(UnityEngine.Random.Range(-3f, 3f), UnityEngine.Random.Range(2f, 5f));
         spinVelocity = -velocity.x;
+
+        spawnScaleCoroutine = StartCoroutine(ScaleUpOnSpawn());
     }
 
     public void UpdatePhysics(float dt, float gravity, float xLim, float floorHeight)
@@ -117,8 +122,31 @@ public class Ball : MonoBehaviour
         // Tick poison
         UpdatePoison(dt);
 
-        spawnDriftParticles(pos);
+        // spawnDriftParticles(pos);
     }
+
+    private System.Collections.IEnumerator ScaleUpOnSpawn()
+    {
+        float elapsedTime = 0f;
+        Vector3 targetScale = Vector3.one;
+
+        // Start at absolute zero scale
+        transform.localScale = Vector3.zero;
+
+        while (elapsedTime < spawnScaleDuration)
+        {
+            elapsedTime += Time.deltaTime;
+
+            // Smoothly interpolate from zero to full scale
+            transform.localScale = Vector3.Lerp(Vector3.zero, targetScale, elapsedTime / spawnScaleDuration);
+
+            yield return null;
+        }
+
+        // Ensure it perfectly lands on final size
+        transform.localScale = targetScale;
+    }
+
 
     // ---- Damage ----
 
@@ -194,7 +222,7 @@ public class Ball : MonoBehaviour
 
         for (int i = 0; i < dropCount; i++)
         {
-            Vector2 randomVel = new Vector2(UnityEngine.Random.Range(-2f, 2f) + velocity.x, UnityEngine.Random.Range(1f, 4f) + velocity.y);
+            Vector2 randomVel = new Vector2(UnityEngine.Random.Range(-5f, 5f), UnityEngine.Random.Range(2f, 5f));
             spawner.SpawnCurrencyDrop(pos, randomVel);
         }
 
@@ -204,22 +232,22 @@ public class Ball : MonoBehaviour
                 break; // end instantly
 
             case BallType.Pentagon:
-                for (int i = 0; i < 2; i++) { var b = spawner.SpawnBall(BallType.Dodecagon); b.transform.position = pos; }
+                for (int i = 0; i < 2; i++) { var b = spawner.SpawnBall(BallType.Dodecagon, pos); }
                 break;
             case BallType.Octagon:
-                for (int i = 0; i < 2; i++) { var b = spawner.SpawnBall(BallType.Tetragon); b.transform.position = pos; }
+                for (int i = 0; i < 2; i++) { var b = spawner.SpawnBall(BallType.Tetragon, pos); }
                 break;
             case BallType.Icotetrasagon:
-                for (int i = 0; i < 2; i++) { var b = spawner.SpawnBall(BallType.Octagon); b.transform.position = pos; }
+                for (int i = 0; i < 2; i++) { var b = spawner.SpawnBall(BallType.Octagon, pos); }
                 break;
             case BallType.Hexacontatetragon:
-                for (int i = 0; i < 2; i++) { var b = spawner.SpawnBall(BallType.Icotetrasagon); b.transform.position = pos; }
+                for (int i = 0; i < 2; i++) { var b = spawner.SpawnBall(BallType.Icotetrasagon, pos); }
                 break;
             case BallType.Chiliaicositetragon:
-                for (int i = 0; i < 2; i++) { var b = spawner.SpawnBall(BallType.Hexacontatetragon); b.transform.position = pos; }
+                for (int i = 0; i < 2; i++) { var b = spawner.SpawnBall(BallType.Hexacontatetragon, pos); }
                 break;
             case BallType.Hexacontapentachiliapentacosiatriacontahexagon:
-                for (int i = 0; i < 2; i++) { var b = spawner.SpawnBall(BallType.Chiliaicositetragon); b.transform.position = pos; }
+                for (int i = 0; i < 2; i++) { var b = spawner.SpawnBall(BallType.Chiliaicositetragon, pos); }
                 break;
         }
 

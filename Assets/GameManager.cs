@@ -1,5 +1,7 @@
 using UnityEngine;
 using System.Collections;
+using Unity.VisualScripting;
+using System.Runtime.CompilerServices;
 
 public class GameManager : MonoBehaviour
 {
@@ -10,13 +12,14 @@ public class GameManager : MonoBehaviour
     public SaveData save;
 
     // Runtime upgrade values (computed from save)
-    public int bulletDamage = 1;
+    public int bulletDamage = 0;
     public float fireRate = 0.5f;
     public int lightningDamage = 0;
     public int lightningBounces = 0;  // 0 = lightning not bought
     public float poisonDamagePerSec = 0;
     public float poisonDuration = 0;  // 0 = poison not bought
     public float currencyMultiplier = 1f;
+    public float playerHealth = 1f;
 
     // Base values
     private const float BASE_FIRE_RATE = 0.5f;
@@ -36,7 +39,7 @@ public class GameManager : MonoBehaviour
 
     private void Start()
     {
-        SetState(GameState.Play);
+        SetState(GameState.Upgrades);
     }
 
     public void SetState(GameState newState)
@@ -99,7 +102,12 @@ public class GameManager : MonoBehaviour
             // Initialize levels at 0 for all upgrade types
             foreach (UpgradeId id in System.Enum.GetValues(typeof(UpgradeId)))
             {
-                save.SetLevel(id, 0);
+                if (id == UpgradeId.BulletDamage ||
+                    id == UpgradeId.LightningBounces ||
+                    id == UpgradeId.PoisonDuration
+                ) {
+                    save.SetLevel(id, 1);
+                } else { save.SetLevel(id, 0); }
             }
         }
     }
@@ -112,10 +120,20 @@ public class GameManager : MonoBehaviour
 
     public void ApplyUpgrades()
     {
-        bulletDamage = 1 + save.GetLevel(UpgradeId.BulletDamage);
+        float pow(float a, float b)
+        {
+            float x = a;
+            for (int i = 1; i < b; i++)
+            {
+                x *= a;
+            }
+            return x;
+        }
+
+        bulletDamage = save.GetLevel(UpgradeId.BulletDamage);
 
         float fireRateLvl = save.GetLevel(UpgradeId.FireRate);
-        fireRate = BASE_FIRE_RATE / (1f + fireRateLvl * 0.2f);
+        fireRate = BASE_FIRE_RATE / (0.95f + fireRateLvl * 0.05f);
 
         lightningDamage = save.GetLevel(UpgradeId.LightningDamage); // 0 if not bought
 
@@ -126,7 +144,9 @@ public class GameManager : MonoBehaviour
         int poisonDurationLvl = save.GetLevel(UpgradeId.PoisonDuration);
         poisonDuration = poisonDurationLvl > 0 ? 1f + (poisonDurationLvl - 1) * 0.5f : 0f;
         
-        currencyMultiplier = 1f + save.GetLevel(UpgradeId.CurrencyMultiplier) * 0.5f;
+        currencyMultiplier = 1f + save.GetLevel(UpgradeId.CurrencyMultiplier) * 0.1f;
+
+        playerHealth = 1f + pow(save.GetLevel(UpgradeId.PlayerHealth), 1.5f) * 0.1f;
     }
 
     public void AddCurrency(double amount)

@@ -57,7 +57,7 @@ public class Bullet : MonoBehaviour
         int totalHits = 1 + lightningBounces;
 
         // Keep track of positions for our continuous line
-        List<Vector3> lightningPositions = new List<Vector3> { firstBall.transform.position };
+        List<Vector3> lightningPositions = new List<Vector3> { gameObject.transform.position, firstBall.transform.position };
 
         for (int i = 1; i < totalHits; i++)
         {
@@ -112,7 +112,7 @@ public class Bullet : MonoBehaviour
 
         // Fix the deletion bug: Use a simple mobile or unlit material to avoid leaking material instances
         lr.material = new Material(Shader.Find("Sprites/Default"));
-        lr.material.color = new Color(0.4f, 0.8f, 1f);
+        lr.material.color = new Color(0.5f, 0.9f, 1f);
 
         // This will cleanly delete the entire chain after 0.15 seconds
         Destroy(lightningObj, 0.15f);
