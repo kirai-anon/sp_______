@@ -5,9 +5,17 @@ using System.Collections.Generic;
 
 public enum BallType
 {
-    Dodecagon, Tetragon, Pentagon, Octagon,
-    Decagon, Icotetrasagon, Hexacontatetragon, Chiliaicositetragon,
-    Hexacontapentachiliapentacosiatriacontahexagon
+    Dodecagon, // 1
+    Tetragon, // 3
+    Pentagon, // 5
+    Octagon, // 8
+    Decagon, // 10
+    Icotetrasagon, // 24
+    Hexacontatetragon, // 64
+    Chiliaicositetragon, // 1024
+    Hexacontapentachiliapentacosiatriacontahexagon, // 65'536
+    Hexadecamegaheptacosiaheptacontaheptachiliadiacosiahexadecagon, // 16'777'216
+    Disgigahectatetracontaheptamegatetractamyriatriacontaoctachiliahexahectatetracontaheptagon // 2'147'483'647
 }
 
 public enum UpgradeId
@@ -21,7 +29,7 @@ public class UpgradeData
 {
     public UpgradeId id;
     public string name;
-    public int cost;
+    public float cost;
     public float x;
     public float y;
 }

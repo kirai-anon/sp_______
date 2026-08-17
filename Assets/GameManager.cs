@@ -1,7 +1,5 @@
 using UnityEngine;
 using System.Collections;
-using Unity.VisualScripting;
-using System.Runtime.CompilerServices;
 
 public class GameManager : MonoBehaviour
 {
@@ -102,12 +100,7 @@ public class GameManager : MonoBehaviour
             // Initialize levels at 0 for all upgrade types
             foreach (UpgradeId id in System.Enum.GetValues(typeof(UpgradeId)))
             {
-                if (id == UpgradeId.BulletDamage ||
-                    id == UpgradeId.LightningBounces ||
-                    id == UpgradeId.PoisonDuration
-                ) {
-                    save.SetLevel(id, 1);
-                } else { save.SetLevel(id, 0); }
+                save.SetLevel(id, 0);
             }
         }
     }
@@ -133,7 +126,7 @@ public class GameManager : MonoBehaviour
         bulletDamage = save.GetLevel(UpgradeId.BulletDamage);
 
         float fireRateLvl = save.GetLevel(UpgradeId.FireRate);
-        fireRate = BASE_FIRE_RATE / (0.95f + fireRateLvl * 0.05f);
+        fireRate = BASE_FIRE_RATE / (1f + fireRateLvl * 0.05f);
 
         lightningDamage = save.GetLevel(UpgradeId.LightningDamage); // 0 if not bought
 

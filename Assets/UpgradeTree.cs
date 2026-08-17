@@ -24,14 +24,14 @@ public class UpgradeTree : MonoBehaviour
     // CHANGED: Replaced 'angle' and 'radius' with 'x' and 'y' position offsets
     private List<UpgradeData> upgrades = new List<UpgradeData>
     {
-        new UpgradeData { id = UpgradeId.BulletDamage,       name = "Bullet Damage",      cost = (int)Mathf.Round(10f/3f),x = -150f, y =  150f },
-        new UpgradeData { id = UpgradeId.FireRate,           name = "Fire Rate",          cost = 10,                      x =  -50f, y =  150f },
-        new UpgradeData { id = UpgradeId.LightningDamage,    name = "Lightning Dmg",      cost = 50,                      x =   50f, y =  150f },
-        new UpgradeData { id = UpgradeId.LightningBounces,   name = "Lightning Bounces",  cost = (int)Mathf.Round(80f/3f),x =  150f, y =  150f },
-        new UpgradeData { id = UpgradeId.PoisonDamagePerSec, name = "Poison Dmg/s",       cost = 60,                      x = -150f, y =    0f },
-        new UpgradeData { id = UpgradeId.PoisonDuration,     name = "Poison Duration",    cost = (int)Mathf.Round(80f/3f),x =  -50f, y =    0f },
-        new UpgradeData { id = UpgradeId.CurrencyMultiplier, name = "Currency Mult",      cost = 20,                      x =   50f, y =    0f },
-        new UpgradeData { id = UpgradeId.PlayerHealth,       name = "Player Health",      cost = 10,                      x =  150f, y =    0f }
+        new UpgradeData { id = UpgradeId.BulletDamage,       name = "Bullet Damage",      cost = 10f, x = -150f, y =  150f },
+        new UpgradeData { id = UpgradeId.FireRate,           name = "Fire Rate",          cost = 10f, x =  -50f, y =  150f },
+        new UpgradeData { id = UpgradeId.LightningDamage,    name = "Lightning Dmg",      cost = 50f, x =   50f, y =  150f },
+        new UpgradeData { id = UpgradeId.LightningBounces,   name = "Lightning Bounces",  cost = 80f, x =  150f, y =  150f },
+        new UpgradeData { id = UpgradeId.PoisonDamagePerSec, name = "Poison Dmg/s",       cost = 60f, x = -150f, y =    0f },
+        new UpgradeData { id = UpgradeId.PoisonDuration,     name = "Poison Duration",    cost = 80f, x =  -50f, y =    0f },
+        new UpgradeData { id = UpgradeId.CurrencyMultiplier, name = "Currency Mult",      cost = 20f, x =   50f, y =    0f },
+        new UpgradeData { id = UpgradeId.PlayerHealth,       name = "Player Health",      cost = 10f, x =  150f, y =    0f }
     };
 
     private List<RectTransform> nodeTransforms = new List<RectTransform>();
@@ -174,7 +174,7 @@ public class UpgradeTree : MonoBehaviour
         }
     }
 
-    private float CostValue(int baseCost, int index)
+    private float CostValue(float baseCost, int index)
     {
         return Mathf.Round(baseCost * Mathf.Pow(3f, index));
     }

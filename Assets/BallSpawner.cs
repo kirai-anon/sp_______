@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
+using Unity.Mathematics;
 
 public class BallSpawner : MonoBehaviour
 {
@@ -107,11 +108,11 @@ public class BallSpawner : MonoBehaviour
         }
     }
 
-    private bool isRiftActive = false; // Add this tracking flag at the class level
+    private bool isRiftActive = false; // tracking flag
 
     private void StepGameplay(BallType[] wave)
-    {
-        // 1. CRITICAL LOCK: If a rift is currently growing or shrinking, stop everything here
+{
+        // if a rift is currently growing or shrinking, stop everything here
         if (isRiftActive) return;
 
         void NextWave()
@@ -138,17 +139,16 @@ public class BallSpawner : MonoBehaviour
 
             if (timer >= spawnInterval)
             {
-                // 2. Turn on the lock before creating the rift
-                isRiftActive = true;
-
-                Vector2 spawnPos = (Vector2)transform.position + new Vector2(Random.Range(-xLim + 3, xLim - 3), Random.Range(0, -floorHeight - 1));
-
-                GameObject riftObj = Instantiate(riftPrefab, new Vector3(spawnPos.x, spawnPos.y, 1), Quaternion.identity);
-                RiftEffect rift = riftObj.GetComponent<RiftEffect>();
+                Vector2 spawnPos = (Vector2)transform.position + new Vector2(UnityEngine.Random.Range(-xLim + 3, xLim - 3), UnityEngine.Random.Range(0, -floorHeight - 1));
 
                 if (wave.Length > 0)
                 {
-                    // 3. We pass a second callback to unlock the spawner when the rift finishes shrinking
+                    // turn on the lock before creating the rift
+                    isRiftActive = true;
+                    GameObject riftObj = Instantiate(riftPrefab, new Vector3(spawnPos.x, spawnPos.y, 1), Quaternion.identity);
+                    RiftEffect rift = riftObj.GetComponent<RiftEffect>();
+
+                    // pass a second callback to unlock the spawner when the rift finishes shrinking
                     StartCoroutine(rift.RunRiftAnimation(
                         () => {
                             for (int i = 0; i < wave.Length; i++)
@@ -156,7 +156,7 @@ public class BallSpawner : MonoBehaviour
                                 SpawnBall(wave[i], spawnPos);
                             }
                         },
-                        () => { isRiftActive = false; } // Unlock callback
+                        () => { isRiftActive = false; } // unlock callback
                     ));
 
                     timer = 0f;
@@ -168,27 +168,52 @@ public class BallSpawner : MonoBehaviour
                     {
                         case < 4:
                             {
+                                // if health multiplier is too low just skip the wave and DO NOT spawn a rift
                                 NextWave();
-                                isRiftActive = false;
+                                timer = 1f;
                                 break;
                             }
                         case >= 4:
                             {
+                                isRiftActive = true;
+                                GameObject riftObj = Instantiate(riftPrefab, new Vector3(spawnPos.x, spawnPos.y, 1), Quaternion.identity);
+                                RiftEffect rift = riftObj.GetComponent<RiftEffect>();
+
                                 StartCoroutine(rift.RunRiftAnimation(
                                     () =>
                                     {
-                                        switch (healthMultiplier)
+                                        // starts at 2^2
+                                        BallType[] ballTypes = new[]
                                         {
-                                            case >= 32: goto Case4;
-                                            case >= 16: Case4: SpawnBall(BallType.Hexacontapentachiliapentacosiatriacontahexagon, spawnPos); goto Case3;
-                                            case >= 8: Case3: SpawnBall(BallType.Chiliaicositetragon, spawnPos); goto Case2;
-                                            case >= 4: Case2: SpawnBall(BallType.Hexacontatetragon, spawnPos); break;
+                                            BallType.Hexacontatetragon, // 4
+                                            BallType.Chiliaicositetragon, // 8
+                                            BallType.Hexacontapentachiliapentacosiatriacontahexagon, // 16
+                                            BallType.Hexacontapentachiliapentacosiatriacontahexagon, // 32
+                                            BallType.Hexadecamegaheptacosiaheptacontaheptachiliadiacosiahexadecagon, // 64
+                                            BallType.Disgigahectatetracontaheptamegatetractamyriatriacontaoctachiliahexahectatetracontaheptagon // 128
+                                        };
+                                        int startFactor = healthMultiplier >= (1 << (ballTypes.Length + 2))
+                                            ? 1 << (ballTypes.Length + 1)
+                                            : healthMultiplier;
+                                        int startIndex = Mathf.Min((int)math.log2(startFactor) - 2, ballTypes.Length - 1);
+                                        for (int i = startIndex; i >= 0; i--)
+                                        {
+                                            int factor = 1 << (i + 2);
+                                            if (healthMultiplier % factor == 0)
+                                            {
+                                                SpawnBall(ballTypes[i], spawnPos);
+                                            }
                                         }
                                     },
-                                    () => { isRiftActive = false; } // Unlock callback
+                                    () =>
+                                    {
+                                        isRiftActive = false;
+                                        // advance the wave only after it finishes completely
+                                        NextWave();
+                                    }
                                 ));
 
-                                NextWave();
+                                timer = 0f;
                                 break;
                             }
                     }
@@ -219,13 +244,13 @@ public class BallSpawner : MonoBehaviour
         balls.Remove(ball);
     }
 
-    public GameObject SpawnCurrencyDrop(Vector3 position, Vector2 velocity)
+    public GameObject SpawnCurrencyDrop(Vector3 position, Vector2 velocity, int value)
     {
         GameObject dropObj = new GameObject("CurrencyDrop");
         dropObj.transform.position = position + new Vector3(0, 0, 0.5f);
 
         CurrencyDrop drop = dropObj.AddComponent<CurrencyDrop>();
-        drop.Initialize(velocity);
+        drop.Initialize(drop.transform.position, velocity, value);
 
         currencyDrops.Add(drop);
         return dropObj;

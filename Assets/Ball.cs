@@ -41,17 +41,22 @@ public class Ball : MonoBehaviour
 
         switch (type)
         {
-            default:                 sides = 12; color = new Color(1f,   0.5f, 0.2f); radius = 1.0f; health = 1;  break; // default: dodecagon
+            default:                 sides = 12; color = new Color(  1f, 0.5f, 0.2f); radius = 1.0f; health = 1;  break; // default: dodecagon
             case BallType.Tetragon:  sides = 4;  color = new Color(0.4f,   1f, 0.4f); radius = 1.2f; health = 3;  break;
-            case BallType.Pentagon:  sides = 5;  color = new Color(1f,   0.4f, 0.7f); radius = 1.5f; health = 5;  break;
-            case BallType.Octagon:   sides = 8;  color = new Color(1f,   0.4f, 0.4f); radius = 1.5f; health = 8;  break;
-            case BallType.Decagon:   sides = 10; color = new Color(1f,     1f, 0.4f); radius = 1.5f; health = 10; break;
+            case BallType.Pentagon:  sides = 5;  color = new Color(  1f, 0.4f, 0.7f); radius = 1.5f; health = 5;  break;
+            case BallType.Octagon:   sides = 8;  color = new Color(  1f, 0.4f, 0.4f); radius = 1.5f; health = 8;  break;
+            case BallType.Decagon:   sides = 10; color = new Color(  1f,   1f, 0.4f); radius = 1.5f; health = 10; break;
 
             // bosses
-            case BallType.Icotetrasagon:       sides = 20;  color = new Color(1f,   0.7f, 0.3f); radius = 2.0f; health = 24;   break;
-            case BallType.Hexacontatetragon:   sides = 32;  color = new Color(1f,   0.1f, 0.9f); radius = 3.0f; health = 64;   break;
+            case BallType.Icotetrasagon:       sides = 24;  color = new Color(  1f, 0.7f, 0.3f); radius = 2.0f; health = 24;   break;
+            case BallType.Hexacontatetragon:   sides = 32;  color = new Color(  1f, 0.1f, 0.9f); radius = 3.0f; health = 64;   break;
             case BallType.Chiliaicositetragon: sides = 64;  color = new Color(0.3f,   1f,   1f); radius = 4.0f; health = 1028; break;
-            case BallType.Hexacontapentachiliapentacosiatriacontahexagon: sides = 48; color = new Color(1f, 0.4f, 0.9f); radius = 5.0f; health = 65536; break;
+            case BallType.Hexacontapentachiliapentacosiatriacontahexagon:
+                                               sides = 48;  color = new Color(  1f, 0.4f,   1f); radius = 5.0f; health = 65536; break;
+            case BallType.Hexadecamegaheptacosiaheptacontaheptachiliadiacosiahexadecagon:
+                                               sides = 20;  color = new Color(0.7f,   1f,   1f); radius = 4.0f; health = 16777216; break;
+            case BallType.Disgigahectatetracontaheptamegatetractamyriatriacontaoctachiliahexahectatetracontaheptagon:
+                                               sides = 16;  color = new Color(0.4f,   1f, 0.4f); radius = 5.0f; health = 2147483647; break;
         }
         
        if (health <= 3) {
@@ -213,17 +218,29 @@ public class Ball : MonoBehaviour
 
     private void DestroyBall()
     {
-        // Drop currency
-        int dropCount = Mathf.CeilToInt(maxHealth / 2f);
+        int totalValue = Mathf.CeilToInt(maxHealth / 2f) * 10;
         Vector3 pos = transform.position;
 
-        // Spawn particles
         SpawnDeathParticles(pos);
 
-        for (int i = 0; i < dropCount; i++)
+        if (totalValue <= 0) return;
+
+        int exponent = Mathf.CeilToInt(Mathf.Log10(totalValue));
+        int currentPower = Mathf.RoundToInt(Mathf.Pow(10, exponent));
+
+        while (totalValue > 0 && currentPower >= 1)
         {
-            Vector2 randomVel = new Vector2(UnityEngine.Random.Range(-5f, 5f), UnityEngine.Random.Range(2f, 5f));
-            spawner.SpawnCurrencyDrop(pos, randomVel);
+            int count = totalValue / currentPower;
+            if (count > 0)
+            {
+                for (int i = 0; i < count; i++)
+                {
+                    Vector2 randomVel = new Vector2(Random.Range(-5f, 5f), Random.Range(2f, 5f));
+                    spawner.SpawnCurrencyDrop(pos, randomVel, currentPower);
+                }
+                totalValue %= currentPower;
+            }
+            currentPower /= 10;
         }
 
         switch (type)

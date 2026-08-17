@@ -180,7 +180,8 @@ MonoBehaviour:
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_fontSharedMaterials: []
+  m_fontSharedMaterials:
+  - {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
   m_fontColor32:
@@ -591,6 +592,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
   save:
     currency: 0
+    upgradeLevelsList: []
   bulletDamage: 1
   fireRate: 0.5
   lightningDamage: 0
@@ -598,6 +600,7 @@ MonoBehaviour:
   poisonDamagePerSec: 0
   poisonDuration: 0
   currencyMultiplier: 1
+  playerHealth: 1
 --- !u!4 &888348734
 Transform:
   m_ObjectHideFlags: 0
@@ -672,10 +675,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UpgradeTree
   canvas: {fileID: 144066917}
+  upgradesContainer: {fileID: 0}
   nodeTemplate: {fileID: 920168728}
-  lineTemplate: {fileID: 4590138059405385034}
   currencyText: {fileID: 1419976271}
-  treeRadius: 200
+  PlayButton: {fileID: 0}
   treeCenter: {x: 960, y: 540}
 --- !u!1 &1419976270
 GameObject:
@@ -719,7 +722,8 @@ MonoBehaviour:
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_fontSharedMaterials: []
+  m_fontSharedMaterials:
+  - {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
   m_fontColor32:
@@ -910,11 +914,6 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 5b02502e8c050554db059431b0c2662c, type: 3}
---- !u!1 &4590138059405385034 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 6737790802992476814, guid: 5b02502e8c050554db059431b0c2662c, type: 3}
-  m_PrefabInstance: {fileID: 4590138059405385033}
-  m_PrefabAsset: {fileID: 0}
 --- !u!224 &4590138059405385035 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 5999952327694332526, guid: 5b02502e8c050554db059431b0c2662c, type: 3}

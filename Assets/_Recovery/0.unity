@@ -180,7 +180,8 @@ MonoBehaviour:
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_fontSharedMaterials: []
+  m_fontSharedMaterials:
+  - {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
   m_fontColor32:
@@ -290,11 +291,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!1 &511472663 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 3906544719302581462, guid: e3b5475282a8d7b49a3c67e186ebd32c, type: 3}
-  m_PrefabInstance: {fileID: 3985237765705689428}
-  m_PrefabAsset: {fileID: 0}
 --- !u!224 &511472664 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 3601227868013490056, guid: e3b5475282a8d7b49a3c67e186ebd32c, type: 3}
@@ -740,6 +736,7 @@ MonoBehaviour:
   initPlayerHealth: 10
   playerHealth: 10
   shootSound: {fileID: 8300000, guid: 9e59394001372934fbaef7f60c018fb3, type: 3}
+  body: {fileID: 0}
 --- !u!58 &835157060
 CircleCollider2D:
   m_ObjectHideFlags: 0
@@ -908,6 +905,7 @@ MonoBehaviour:
   poisonDamagePerSec: 0
   poisonDuration: 0
   currencyMultiplier: 1
+  playerHealth: 1
 --- !u!4 &1047688741
 Transform:
   m_ObjectHideFlags: 0
@@ -1305,12 +1303,9 @@ MonoBehaviour:
   canvas: {fileID: 702421705}
   upgradesContainer: {fileID: 498770782}
   nodeTemplate: {fileID: 1411486000}
-  lineTemplate: {fileID: 511472663}
   currencyText: {fileID: 276900538}
   PlayButton: {fileID: 1464764154}
-  treeRadius: 100
   treeCenter: {x: 0, y: 0}
-  rotMult: 10
 --- !u!1 &1788032555
 GameObject:
   m_ObjectHideFlags: 0
@@ -1392,7 +1387,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 10754, guid: 0000000000000000f000000000000000, type: 0}
+  - {fileID: 2100000, guid: 9dfc825aed78fcd4ba02077103263b40, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1563,7 +1558,8 @@ MonoBehaviour:
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_fontSharedMaterials: []
+  m_fontSharedMaterials:
+  - {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
   m_fontColor32:
