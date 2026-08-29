@@ -6,8 +6,8 @@ public class Ball : MonoBehaviour
     private BallType type;
     private float radius;
     private Color color;
-    private int health;
-    private int maxHealth;
+    private float health;
+    private float maxHealth;
     private int sides;
 
     private int baseStrength;
@@ -24,13 +24,13 @@ public class Ball : MonoBehaviour
     private List<PoisonEffect> poisonEffects = new List<PoisonEffect>();
 
     public float Radius => radius;
-    public int Health => health;
-    public int MaxHealth => maxHealth;
+    public float Health => health;
+    public float MaxHealth => maxHealth;
 
     private AudioClip[] audioClips;
 
     private Coroutine spawnScaleCoroutine;
-    private float spawnScaleDuration = 0.1f;
+    private float spawnScaleDuration = 0.15f;
 
     public void Initialize(BallType ballType, int resolution, BallSpawner ballSpawner, int hpMult, AudioClip[] ballSounds)
     {
@@ -59,7 +59,7 @@ public class Ball : MonoBehaviour
                                                sides = 16;  color = new Color(0.4f,   1f, 0.4f); radius = 5.0f; health = 2147483647; break;
         }
         
-       if (health <= 3) {
+        if (health <= 3) {
             baseStrength = 1;
         } else if (health <= 8) {
             baseStrength = 2;
@@ -95,39 +95,35 @@ public class Ball : MonoBehaviour
         col.isTrigger = true;
 
         // Velocity
-        velocity = new Vector2(UnityEngine.Random.Range(-3f, 3f), UnityEngine.Random.Range(2f, 5f));
+        velocity = new Vector2(Random.Range(-3f, 3f), Random.Range(2f, 5f));
         spinVelocity = -velocity.x;
 
         spawnScaleCoroutine = StartCoroutine(ScaleUpOnSpawn());
     }
 
-    public void UpdatePhysics(float dt, float gravity, float xLim, float floorHeight)
+    public void UpdatePhysics(float dt, float gravity, Vector2[] wallPoints)
     {
         velocity.y -= gravity * dt;
 
-        Vector3 pos = transform.position;
-        pos.x += velocity.x * dt;
-        pos.y += velocity.y * dt;
+        // Sub-step position and collisions to prevent tunneling
+        int subSteps = 4;
+        float subDt = dt / subSteps;
 
-        if (Mathf.Abs(pos.x) > xLim - radius)
+        for (int i = 0; i < subSteps; i++)
         {
-            velocity.x = -velocity.x;
-            pos.x += velocity.x * dt;
-        }
-        if (pos.y < floorHeight + radius)
-        {
-            velocity.y = 12.0f;
-            pos.y += velocity.y * dt;
+            Vector3 pos = transform.position;
+            pos.x += velocity.x * subDt;
+            pos.y += velocity.y * subDt;
+
+            LineCollisionHelper.ResolveCollisions(ref pos, ref velocity, radius, wallPoints, true);
+
+            transform.position = pos;
         }
 
-        transform.position = pos;
         transform.Rotate(0, 0, spinVelocity * dt * 31.41f);
         healthText.transform.rotation = Quaternion.Euler(0, 0, 0);
 
-        // Tick poison
         UpdatePoison(dt);
-
-        // spawnDriftParticles(pos);
     }
 
     private System.Collections.IEnumerator ScaleUpOnSpawn()
@@ -155,14 +151,17 @@ public class Ball : MonoBehaviour
 
     // ---- Damage ----
 
-    public void TakeDamage(int damage)
+    public void TakeDamage(float damage, DamageType damageType = DamageType.Normal)
     {
         health -= damage;
-        healthText.text = health.ToString();
+        healthText.text = Mathf.RoundToInt(health).ToString();
 
-        if (health <= 0) {
+        if (health <= 0)
+        {
             AudioSource.PlayClipAtPoint(audioClips[4 + baseStrength], Camera.main.transform.position, 1.0f);
-        } else {
+        }
+        else
+        {
             AudioSource.PlayClipAtPoint(audioClips[baseStrength], Camera.main.transform.position, 1.0f);
         }
 
@@ -171,7 +170,101 @@ public class Ball : MonoBehaviour
             StopCoroutine(damageFlashCoroutine);
         damageFlashCoroutine = StartCoroutine(DamageFlash());
 
+        // Spawn floating damage number dynamically
+        SpawnDamageNumber(damage, damageType);
+
         if (health <= 0) DestroyBall();
+        else { spawnHitParticles(transform.position); }
+    }
+
+    private void SpawnDamageNumber(float damage, DamageType damageType)
+    {
+        Canvas canvas = FindFirstObjectByType<Canvas>();
+        if (canvas == null) return;
+
+        GameObject textObj = new GameObject("DamagePopup");
+        textObj.transform.SetParent(canvas.transform, false);
+
+        RectTransform rectTransform = textObj.AddComponent<RectTransform>();
+        Vector3 screenPoint = Camera.main.WorldToScreenPoint(transform.position + Vector3.up * 0.5f);
+
+        if (canvas.renderMode == RenderMode.ScreenSpaceOverlay)
+        {
+            rectTransform.position = screenPoint;
+        }
+        else
+        {
+            Vector2 localPoint;
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(canvas.transform as RectTransform, screenPoint, canvas.worldCamera, out localPoint);
+            rectTransform.localPosition = localPoint;
+        }
+
+        TMPro.TextMeshProUGUI tmp = textObj.AddComponent<TMPro.TextMeshProUGUI>();
+        tmp.text = Mathf.Abs(Mathf.RoundToInt(damage)).ToString();
+        tmp.fontSize = 22;
+        tmp.alignment = TMPro.TextAlignmentOptions.Center;
+
+        // Apply custom colors based on damage type
+        switch (damageType)
+        {
+            case DamageType.Lightning:
+                tmp.color = Color.lightCyan;
+                break;
+            case DamageType.Poison:
+                tmp.color = Color.mediumPurple;
+                break;
+            case DamageType.Normal:
+            default:
+                tmp.color = Color.softRed;
+                break;
+        }
+
+        textObj.AddComponent<DamagePopupAnimator>();
+    }
+
+    public class DamagePopupAnimator : MonoBehaviour
+    {
+        readonly private float duration = 1.2f;
+        private float elapsed = 0f;
+        private float vx;
+        private float vy;
+        private RectTransform rect;
+        private TMPro.TextMeshProUGUI tmp;
+
+        void Start()
+        {
+            rect = GetComponent<RectTransform>();
+            tmp = GetComponent<TMPro.TextMeshProUGUI>();
+
+            // Scaled up for UI pixel space
+            vx = UnityEngine.Random.Range(-50f, 50f);
+            vy = UnityEngine.Random.Range(150f, 250f);
+        }
+
+        void Update()
+        {
+            float dt = Time.deltaTime;
+            elapsed += dt;
+
+            if (elapsed >= duration)
+            {
+                Destroy(gameObject);
+                return;
+            }
+
+            // Apply gravity in pixels/sec^2
+            vy -= 400f * dt;
+
+            rect.localPosition += new Vector3(vx * dt, vy * dt, 0);
+
+            // Fade out alpha over time
+            if (tmp != null)
+            {
+                Color c = tmp.color;
+                c.a = 1f - (elapsed / duration);
+                tmp.color = c;
+            }
+        }
     }
 
     private System.Collections.IEnumerator DamageFlash()
@@ -211,14 +304,14 @@ public class Ball : MonoBehaviour
     }
 
     // Poison and lightning bypass armor (full damage regardless)
-    public void TakeTrueDamage(int damage)
+    public void TakeTrueDamage(float damage, DamageType damageType = DamageType.Normal)
     {
         TakeDamage(damage); // Currently same, but won't be reduced if armor is added later
     }
 
-    private void DestroyBall()
+    public void DestroyBall()
     {
-        int totalValue = Mathf.CeilToInt(maxHealth / 2f) * 10;
+        int totalValue = Mathf.CeilToInt(maxHealth / 2f) * 69;
         Vector3 pos = transform.position;
 
         SpawnDeathParticles(pos);
@@ -235,7 +328,7 @@ public class Ball : MonoBehaviour
             {
                 for (int i = 0; i < count; i++)
                 {
-                    Vector2 randomVel = new Vector2(Random.Range(-5f, 5f), Random.Range(2f, 5f));
+                    Vector2 randomVel = velocity + new Vector2(Random.Range(-5f, 5f), Random.Range(2f, 5f));
                     spawner.SpawnCurrencyDrop(pos, randomVel, currentPower);
                 }
                 totalValue %= currentPower;
@@ -292,7 +385,7 @@ public class Ball : MonoBehaviour
             {
                 int dmg = (int)p.damageAccumulator;
                 p.damageAccumulator -= dmg;
-                TakeTrueDamage(dmg);
+                TakeTrueDamage(dmg, DamageType.Poison);
                 if (health <= 0) return; // Already destroyed
             }
 
@@ -418,11 +511,9 @@ public class Ball : MonoBehaviour
         }
     }
     
-    private void spawnDriftParticles(Vector3 position)
+    private void spawnHitParticles(Vector3 position)
     {
-        int particleCount = UnityEngine.Random.Range(-6, 2);
-
-        if (particleCount <= 0) return;
+        int particleCount = UnityEngine.Random.Range(6, 10);
 
         for (int i = 0; i < particleCount; i++)
         {

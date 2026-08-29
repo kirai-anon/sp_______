@@ -26,6 +26,10 @@ public class BallSpawner : MonoBehaviour
 
     [SerializeField] private AudioClip[] ballSounds;
 
+    [Header("Line Wall Reference")]
+    public LineRenderer wallLineRenderer;
+    private Vector2[] wallPoints;
+
     private float timer;
     public List<Ball> balls = new List<Ball>();
 
@@ -49,23 +53,41 @@ public class BallSpawner : MonoBehaviour
         game.Add(new BallType[] { BallType.Octagon });
         game.Add(new BallType[] { BallType.Decagon });
         game.Add(new BallType[] { }); // empty last part
+
+        CacheWallPoints();
+    }
+
+    public void CacheWallPoints()
+    {
+        if (wallLineRenderer != null)
+        {
+            int count = wallLineRenderer.positionCount;
+            wallPoints = new Vector2[count];
+            for (int i = 0; i < count; i++)
+            {
+                // Convert to local or world space depending on your setup (using transform.TransformPoint if needed)
+                wallPoints[i] = wallLineRenderer.transform.TransformPoint(wallLineRenderer.GetPosition(i));
+            }
+        }
     }
 
     void Update()
     {
         if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameManager.GameState.Play)
         {
-            // Update physics safely using regular for-loops
+            // Refresh points dynamically if your lines move/animate
+            CacheWallPoints();
+
             for (int i = balls.Count - 1; i >= 0; i--)
             {
                 if (balls[i] != null)
-                    balls[i].UpdatePhysics(Time.deltaTime, gravity, xLim, floorHeight);
+                    balls[i].UpdatePhysics(Time.deltaTime, gravity, wallPoints);
             }
 
             for (int i = currencyDrops.Count - 1; i >= 0; i--)
             {
                 if (currencyDrops[i] != null)
-                    currencyDrops[i].UpdatePhysics(Time.deltaTime, gravity, xLim, floorHeight);
+                    currencyDrops[i].UpdatePhysics(Time.deltaTime, gravity, wallPoints);
             }
 
             if (game.Count == 0) return;
@@ -81,25 +103,15 @@ public class BallSpawner : MonoBehaviour
         }
         else
         {
-            // GAME OVER / MENU CLEANUP: Wipe out everything safely using reverse loops
-
-            // 1. Purge all remaining active balls
+            // Cleanup loops remain unchanged...
             for (int i = balls.Count - 1; i >= 0; i--)
             {
-                if (balls[i] != null)
-                {
-                    // Assign a truly massive integer value (or call a custom instant kill method)
-                    balls[i].TakeTrueDamage(int.MaxValue);
-                }
+                if (balls[i] != null) balls[i].DestroyBall();
             }
 
-            // 2. Clear out all drifting currency drops from the game space
             for (int i = currencyDrops.Count - 1; i >= 0; i--)
             {
-                if (currencyDrops[i] != null)
-                {
-                    Destroy(currencyDrops[i].gameObject);
-                }
+                if (currencyDrops[i] != null) Destroy(currencyDrops[i].gameObject);
             }
 
             healthMultiplier = 1;

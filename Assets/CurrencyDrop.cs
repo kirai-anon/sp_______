@@ -41,15 +41,14 @@ public class CurrencyDrop : MonoBehaviour
         UpdateVisuals();
     }
 
-    public void UpdatePhysics(float dt, float gravity, float xLim, float floorHeight)
+    public void UpdatePhysics(float dt, float gravity, Vector2[] wallPoints)
     {
         if (collected) return;
 
-        // Apply natural gravity and air resistance
         velocity.y -= gravity * dt;
         velocity.x *= 0.99f;
 
-        // Continuous Mutual Attraction (Swirling physics)
+        // Pull force calculation stays per-frame
         Collider2D[] colliders = Physics2D.OverlapCircleAll(transform.position, pullRadius);
         foreach (var otherCol in colliders)
         {
@@ -70,29 +69,22 @@ public class CurrencyDrop : MonoBehaviour
             }
         }
 
-        // Check for 10-cluster merge condition when drops are tightly packed within mergeDistance
         CheckForClusterMerge();
 
-        // Apply final velocity to position
-        Vector3 pos = transform.position;
-        pos.x += velocity.x * dt;
-        pos.y += velocity.y * dt;
+        // Sub-step position integration and line collision to prevent falling through
+        int subSteps = 4;
+        float subDt = dt / subSteps;
 
-        // Wall collision
-        if (Mathf.Abs(pos.x) > xLim - radius)
+        for (int i = 0; i < subSteps; i++)
         {
-            pos.x = Mathf.Sign(pos.x) * (xLim - radius);
-            velocity.x *= -0.5f;
-        }
+            Vector3 pos = transform.position;
+            pos.x += velocity.x * subDt;
+            pos.y += velocity.y * subDt;
 
-        // Floor collision
-        if (pos.y < floorHeight + radius)
-        {
-            pos.y = floorHeight + radius;
-            velocity.y = -0.9f;
-        }
+            LineCollisionHelper.ResolveCollisions(ref pos, ref velocity, radius, wallPoints, false);
 
-        transform.position = pos;
+            transform.position = pos;
+        }
     }
 
     private void CheckForClusterMerge()

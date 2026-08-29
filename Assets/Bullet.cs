@@ -5,7 +5,7 @@ public class Bullet : MonoBehaviour
 {
     [SerializeField] private float speed = 20f;
 
-    private int damage;
+    private float damage;
     private int lightningDamage;
     private int lightningBounces;
     private float poisonDamagePerSec;
@@ -13,7 +13,7 @@ public class Bullet : MonoBehaviour
     private BallSpawner ballSpawner;
     private bool hasHit = false;
 
-    public void Initialize(int dmg, int ltnDmg, int ltnBounces, float poisonDps, float poisonDur, BallSpawner spawner)
+    public void Initialize(float dmg, int ltnDmg, int ltnBounces, float poisonDps, float poisonDur, BallSpawner spawner)
     {
         damage = dmg;
         lightningDamage = ltnDmg;
@@ -77,7 +77,7 @@ public class Bullet : MonoBehaviour
 
             if (nearest == null) break;
 
-            nearest.TakeTrueDamage(lightningDamage);
+            nearest.TakeTrueDamage(lightningDamage, DamageType.Lightning);
 
             if (poisonDuration > 0 && poisonDamagePerSec > 0)
                 nearest.ApplyPoison(poisonDamagePerSec, poisonDuration);

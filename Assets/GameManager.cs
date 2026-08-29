@@ -10,7 +10,7 @@ public class GameManager : MonoBehaviour
     public SaveData save;
 
     // Runtime upgrade values (computed from save)
-    public int bulletDamage = 0;
+    public float bulletDamage = 0;
     public float fireRate = 0.5f;
     public int lightningDamage = 0;
     public int lightningBounces = 0;  // 0 = lightning not bought
@@ -123,7 +123,7 @@ public class GameManager : MonoBehaviour
             return x;
         }
 
-        bulletDamage = save.GetLevel(UpgradeId.BulletDamage);
+        bulletDamage = Mathf.Pow(1 + save.GetLevel(UpgradeId.BulletDamage) / 10, 2);
 
         float fireRateLvl = save.GetLevel(UpgradeId.FireRate);
         fireRate = BASE_FIRE_RATE / (1f + fireRateLvl * 0.05f);
@@ -139,7 +139,7 @@ public class GameManager : MonoBehaviour
         
         currencyMultiplier = 1f + save.GetLevel(UpgradeId.CurrencyMultiplier) * 0.1f;
 
-        playerHealth = 1f + pow(save.GetLevel(UpgradeId.PlayerHealth), 1.5f) * 0.1f;
+        playerHealth = 1f + pow(save.GetLevel(UpgradeId.PlayerHealth), 1.4f) * 0.1f;
     }
 
     public void AddCurrency(double amount)

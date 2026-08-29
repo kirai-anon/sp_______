@@ -24,6 +24,13 @@ public enum UpgradeId
     PoisonDamagePerSec, PoisonDuration, CurrencyMultiplier, PlayerHealth
 }
 
+public enum DamageType
+{
+    Normal,
+    Lightning,
+    Poison
+}
+
 [Serializable]
 public class UpgradeData
 {

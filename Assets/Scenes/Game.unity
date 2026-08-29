@@ -900,6 +900,7 @@ MonoBehaviour:
   - {fileID: 8300000, guid: 956555f6ae8ce884a9129de3905d7981, type: 3}
   - {fileID: 8300000, guid: c5212f47938c7a3448a6473aa3557adb, type: 3}
   - {fileID: 8300000, guid: c5212f47938c7a3448a6473aa3557adb, type: 3}
+  wallLineRenderer: {fileID: 1082872222}
   balls: []
   currencyDrops: []
 --- !u!4 &977599862
@@ -1192,6 +1193,7 @@ LineRenderer:
   m_Positions:
   - {x: -7, y: 7, z: 0}
   - {x: -7, y: -7, z: 1}
+  - {x: 0, y: -5, z: 1}
   - {x: 7, y: -7, z: 1}
   - {x: 7, y: 7, z: 1}
   m_Parameters:
@@ -1830,8 +1832,8 @@ MonoBehaviour:
   targetMusicSource: {fileID: 2105287653}
   width: 8
   height: 8
-  spacing: 3
-  baseJitter: 1
+  spacing: 4
+  baseJitter: 2
   jitterAmount: 1
   driftSpeed: 0.3
   colorChangeSpeed: 5
