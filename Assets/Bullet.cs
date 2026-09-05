@@ -5,7 +5,7 @@ public class Bullet : MonoBehaviour
 {
     [SerializeField] private float speed = 20f;
 
-    private float damage;
+    private float bulletDamage;
     private int lightningDamage;
     private int lightningBounces;
     private float poisonDamagePerSec;
@@ -15,7 +15,7 @@ public class Bullet : MonoBehaviour
 
     public void Initialize(float dmg, int ltnDmg, int ltnBounces, float poisonDps, float poisonDur, BallSpawner spawner)
     {
-        damage = dmg;
+        bulletDamage = dmg;
         lightningDamage = ltnDmg;
         lightningBounces = ltnBounces;
         poisonDamagePerSec = poisonDps;
@@ -35,10 +35,11 @@ public class Bullet : MonoBehaviour
         if (!other.TryGetComponent<Ball>(out Ball ball)) return;
         hasHit = true;
 
-        ball.TakeDamage(damage);
+        ball.TakeDamage(bulletDamage, DamageType.Normal);
 
         if (lightningBounces > 0 && lightningDamage > 0)
         {
+            ball.TakeTrueDamage(lightningDamage, DamageType.Lightning);
             TriggerLightning(ball);
         }
 

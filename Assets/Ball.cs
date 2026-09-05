@@ -115,7 +115,7 @@ public class Ball : MonoBehaviour
             pos.x += velocity.x * subDt;
             pos.y += velocity.y * subDt;
 
-            LineCollisionHelper.ResolveCollisions(ref pos, ref velocity, radius, wallPoints, true);
+            LineCollisionHelper.ResolveCollisions(ref pos, ref velocity, radius, wallPoints, true, 0.1f);
 
             transform.position = pos;
         }
@@ -151,7 +151,7 @@ public class Ball : MonoBehaviour
 
     // ---- Damage ----
 
-    public void TakeDamage(float damage, DamageType damageType = DamageType.Normal)
+    public void TakeDamage(float damage, DamageType damageType)
     {
         health -= damage;
         healthText.text = Mathf.RoundToInt(health).ToString();
@@ -182,7 +182,7 @@ public class Ball : MonoBehaviour
         Canvas canvas = FindFirstObjectByType<Canvas>();
         if (canvas == null) return;
 
-        GameObject textObj = new GameObject("DamagePopup");
+        GameObject textObj = new GameObject("DamageNumber");
         textObj.transform.SetParent(canvas.transform, false);
 
         RectTransform rectTransform = textObj.AddComponent<RectTransform>();
@@ -219,10 +219,10 @@ public class Ball : MonoBehaviour
                 break;
         }
 
-        textObj.AddComponent<DamagePopupAnimator>();
+        textObj.AddComponent<DamageNumberAnimator>();
     }
 
-    public class DamagePopupAnimator : MonoBehaviour
+    public class DamageNumberAnimator : MonoBehaviour
     {
         readonly private float duration = 1.2f;
         private float elapsed = 0f;
@@ -304,14 +304,14 @@ public class Ball : MonoBehaviour
     }
 
     // Poison and lightning bypass armor (full damage regardless)
-    public void TakeTrueDamage(float damage, DamageType damageType = DamageType.Normal)
+    public void TakeTrueDamage(float damage, DamageType damageType)
     {
-        TakeDamage(damage); // Currently same, but won't be reduced if armor is added later
+        TakeDamage(damage, damageType); // Currently same, but won't be reduced if armor is added later
     }
 
     public void DestroyBall()
     {
-        int totalValue = Mathf.CeilToInt(maxHealth / 2f) * 69;
+        int totalValue = Mathf.CeilToInt(maxHealth / 2f) * 500;
         Vector3 pos = transform.position;
 
         SpawnDeathParticles(pos);

@@ -135,7 +135,7 @@ public class GameManager : MonoBehaviour
         poisonDamagePerSec = save.GetLevel(UpgradeId.PoisonDamagePerSec); // 0 if not bought
 
         int poisonDurationLvl = save.GetLevel(UpgradeId.PoisonDuration);
-        poisonDuration = poisonDurationLvl > 0 ? 1f + (poisonDurationLvl - 1) * 0.5f : 0f;
+        poisonDuration = poisonDurationLvl > 0 ? 1f + (poisonDurationLvl - 1) * 0.5f : 1f;
         
         currencyMultiplier = 1f + save.GetLevel(UpgradeId.CurrencyMultiplier) * 0.1f;
 

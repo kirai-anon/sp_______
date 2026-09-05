@@ -2,9 +2,13 @@ using UnityEngine;
 
 public static class LineCollisionHelper
 {
-    public static void ResolveCollisions(ref Vector3 pos, ref Vector2 velocity, float radius, Vector2[] wallPoints, bool isBallBounce = false)
+    public static void ResolveCollisions(ref Vector3 pos, ref Vector2 velocity, float radius, Vector2[] wallPoints, bool isBallBounce = false, float lineThickness = 0f)
     {
         if (wallPoints == null || wallPoints.Length < 2) return;
+
+        // The effective collision radius combines the object's radius and half the line's thickness
+        float effectiveRadius = radius + (lineThickness * 0.5f);
+        float effectiveRadiusSqr = effectiveRadius * effectiveRadius;
 
         for (int i = 0; i < wallPoints.Length - 1; i++)
         {
@@ -22,7 +26,7 @@ public static class LineCollisionHelper
             Vector2 normal = (Vector2)pos - closest;
             float sqrDist = normal.sqrMagnitude;
 
-            if (sqrDist < radius * radius)
+            if (sqrDist < effectiveRadiusSqr)
             {
                 float dist = Mathf.Sqrt(sqrDist);
                 if (dist > 0.0001f)
@@ -34,8 +38,8 @@ public static class LineCollisionHelper
                     normal = new Vector2(-ba.y, ba.x).normalized;
                 }
 
-                // Positional correction (push out of wall)
-                pos = closest + normal * radius;
+                // Positional correction (push out to the surface of the thick line)
+                pos = closest + normal * effectiveRadius;
 
                 // Velocity response
                 float dot = Vector2.Dot(velocity, normal);
@@ -43,7 +47,6 @@ public static class LineCollisionHelper
                 {
                     if (isBallBounce)
                     {
-                        // Custom ball behavior (e.g., floor bounce boost vs wall reflection)
                         if (Mathf.Abs(normal.y) > 0.7f && normal.y > 0) // roughly pointing up (floor)
                         {
                             velocity -= 2f * dot * normal;
@@ -61,6 +64,12 @@ public static class LineCollisionHelper
                     }
                 }
             }
+        }
+
+        if (pos.y < -20)
+        {
+            pos = new Vector3(0, 0, pos.z);
+            velocity = new Vector2(velocity.x, 0);
         }
     }
 }

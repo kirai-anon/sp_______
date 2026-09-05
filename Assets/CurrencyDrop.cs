@@ -81,7 +81,7 @@ public class CurrencyDrop : MonoBehaviour
             pos.x += velocity.x * subDt;
             pos.y += velocity.y * subDt;
 
-            LineCollisionHelper.ResolveCollisions(ref pos, ref velocity, radius, wallPoints, false);
+            LineCollisionHelper.ResolveCollisions(ref pos, ref velocity, radius, wallPoints, false, 0.1f);
 
             transform.position = pos;
         }
