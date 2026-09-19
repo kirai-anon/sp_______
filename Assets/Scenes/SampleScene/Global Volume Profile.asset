@@ -1,5 +1,24 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-8880597925810726131
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 0}
+  m_Name: VisualDelayVolume
+  m_EditorClassIdentifier: Assembly-CSharp::VisualDelayVolume
+  active: 1
+  delay:
+    m_OverrideState: 1
+    m_Value: 0.75
+  intensity:
+    m_OverrideState: 1
+    m_Value: 1
 --- !u!114 &-7383867058787686798
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -21,7 +40,7 @@ MonoBehaviour:
     m_Value: 0.373
   response:
     m_OverrideState: 1
-    m_Value: 0
+    m_Value: 0.362
   texture:
     m_OverrideState: 0
     m_Value: {fileID: 0}
@@ -38,6 +57,7 @@ MonoBehaviour:
   m_Name: Global Volume Profile
   m_EditorClassIdentifier: Unity.RenderPipelines.Core.Runtime::UnityEngine.Rendering.VolumeProfile
   components:
+  - {fileID: -8880597925810726131}
   - {fileID: 6305064435512308273}
   - {fileID: -7383867058787686798}
   - {fileID: 795722337136173171}

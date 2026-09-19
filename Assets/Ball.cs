@@ -282,20 +282,20 @@ public class Ball : MonoBehaviour
 
         // Ease into red
         elapsed = 0f;
-        while (elapsed < 0.06f)
+        while (elapsed < 0.05f)
         {
             elapsed += Time.deltaTime;
-            float t = elapsed / 0.06f;
+            float t = elapsed / 0.05f;
             spriteRenderer.color = Color.Lerp(Color.white, Color.red, t);
             yield return null;
         }
 
         // Back to original
         elapsed = 0f;
-        while (elapsed < 0.06f)
+        while (elapsed < 0.054f)
         {
             elapsed += Time.deltaTime;
-            float t = elapsed / 0.06f;
+            float t = elapsed / 0.05f;
             spriteRenderer.color = Color.Lerp(Color.red, color, t);
             yield return null;
         }
@@ -513,7 +513,7 @@ public class Ball : MonoBehaviour
     
     private void spawnHitParticles(Vector3 position)
     {
-        int particleCount = UnityEngine.Random.Range(6, 10);
+        int particleCount = Mathf.Max(UnityEngine.Random.Range(-1, 3), 0);
 
         for (int i = 0; i < particleCount; i++)
         {
