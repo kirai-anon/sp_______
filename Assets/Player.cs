@@ -3,6 +3,8 @@ using UnityEngine;
 
 public class Player : MonoBehaviour
 {
+    [SerializeField] private CameraShake cameraShake;
+    [SerializeField] private FlatLandscape flatLandscape;
     [SerializeField] private GameObject bulletPrefab;
     [SerializeField] private BallSpawner ballSpawner;
 
@@ -18,6 +20,8 @@ public class Player : MonoBehaviour
     [SerializeField] private GameObject body;
 
     private float wobbleTimer;
+
+    private float phaseTimer;
 
     float mouseX = 0;
 
@@ -64,10 +68,6 @@ public class Player : MonoBehaviour
                             transform.position.z
                         );
                 }
-                else
-                {
-                    wobbleTimer *= 0.8f;
-                }
             }
 
             if (playerHealth <= 0f)
@@ -85,10 +85,25 @@ public class Player : MonoBehaviour
             ResetPlayer();
         }
 
-        Vector3 pos = transform.position;
+        if (!Input.GetKey(KeyCode.Mouse0))
+        {
+            wobbleTimer *= 0.8f;
+        }
+
+            Vector3 pos = transform.position;
         pos.x = Mathf.Lerp(pos.x, mouseX, 0.2f);
         pos.y = -6f;
         transform.position = pos;
+
+        phaseTimer += Time.deltaTime;
+        phaseTimer %= math.PI * 2;
+
+        Vector2 offset =
+            new Vector2(pos.x, pos.y + 6f) * 0.05f +
+            new Vector2(Mathf.Cos(phaseTimer), Mathf.Sin(phaseTimer)) * 0.3f;
+
+        cameraShake.SetOffset(offset);
+        flatLandscape.SetOffset(offset * 0.5f);
     }
 
     private void Shoot()

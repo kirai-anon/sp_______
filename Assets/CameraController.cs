@@ -3,11 +3,20 @@ using UnityEngine;
 
 public class CameraShake : MonoBehaviour
 {
-    private Vector3 originalPos;
+    private Vector3 offsetPosition;
+    private Vector3 currentShakeOffset;
+    private Vector3 baseLocalPosition;
 
     void Start()
     {
-        originalPos = transform.localPosition;
+        // Save the initial local position as our baseline
+        baseLocalPosition = transform.localPosition;
+    }
+
+    void LateUpdate()
+    {
+        // Apply the persistent offset + any active shake offset every frame
+        transform.localPosition = baseLocalPosition + offsetPosition + currentShakeOffset;
     }
 
     public void TriggerShake(float duration, float magnitude)
@@ -21,19 +30,22 @@ public class CameraShake : MonoBehaviour
 
         while (elapsed < duration)
         {
-            transform.localPosition = (1 - elapsed / duration) * magnitude * Random.insideUnitSphere;
+            float strength = (1f - (elapsed / duration)) * magnitude;
+            Vector2 randomPoint = Random.insideUnitCircle * strength;
+
+            // Store just the shake offset temporarily
+            currentShakeOffset = new Vector3(randomPoint.x, randomPoint.y, 0f);
 
             elapsed += Time.deltaTime;
-
             yield return null;
         }
 
-        // Reset back to the original local position
-        transform.localPosition = originalPos;
+        // Clear the shake offset when finished
+        currentShakeOffset = Vector3.zero;
     }
 
-    void Update()
+    public void SetOffset(Vector2 offset)
     {
-        
+        offsetPosition = new Vector3(offset.x, offset.y, 0f);
     }
 }

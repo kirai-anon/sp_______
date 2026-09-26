@@ -32,12 +32,25 @@ public class Ball : MonoBehaviour
     private Coroutine spawnScaleCoroutine;
     private float spawnScaleDuration = 0.15f;
 
-    public void Initialize(BallType ballType, int resolution, BallSpawner ballSpawner, int hpMult, AudioClip[] ballSounds)
+    private CameraShake cameraShake;
+
+    private GameObject activeDamageNumberObj;
+    private DamageNumberAnimator activeDamageAnimator;
+    private float lastDamageNumberTime;
+    private const float damageStackTimeLimit = 0.4f;
+
+    private Canvas hudCanvas;
+
+    public void Initialize(BallType ballType, int resolution, BallSpawner ballSpawner, int hpMult, AudioClip[] ballSounds, CameraShake cameraControl, Canvas canvas)
     {
         type = ballType;
         spawner = ballSpawner;
 
+        cameraShake = cameraControl;
+
         audioClips = ballSounds;
+
+        hudCanvas = canvas;
 
         switch (type)
         {
@@ -159,6 +172,7 @@ public class Ball : MonoBehaviour
         if (health <= 0)
         {
             AudioSource.PlayClipAtPoint(audioClips[4 + baseStrength], Camera.main.transform.position, 1.0f);
+            cameraShake.TriggerShake(0.3f, 0.15f * baseStrength);//duration,strenght
         }
         else
         {
@@ -179,29 +193,56 @@ public class Ball : MonoBehaviour
 
     private void SpawnDamageNumber(float damage, DamageType damageType)
     {
-        Canvas canvas = FindFirstObjectByType<Canvas>();
-        if (canvas == null) return;
+        float timeSinceLastSpawn = Time.time - lastDamageNumberTime;
 
+        // Check if we can stack onto the existing active damage number
+        if (activeDamageAnimator != null && timeSinceLastSpawn <= damageStackTimeLimit)
+        {
+            activeDamageAnimator.AddDamage(damage);
+            lastDamageNumberTime = Time.time;
+            return;
+        }
+
+        // Fallback if not assigned in Inspector
+        if (hudCanvas == null)
+        {
+            hudCanvas = FindFirstObjectByType<Canvas>();
+        }
+        if (hudCanvas == null || Camera.main == null) return;
+
+        // Create the damage number GameObject
         GameObject textObj = new GameObject("DamageNumber");
-        textObj.transform.SetParent(canvas.transform, false);
+        textObj.transform.SetParent(hudCanvas.transform, false);
 
         RectTransform rectTransform = textObj.AddComponent<RectTransform>();
-        Vector3 screenPoint = Camera.main.WorldToScreenPoint(transform.position + Vector3.up * 0.5f);
+        rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
+        rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+        rectTransform.pivot = new Vector2(0.5f, 0.5f);
 
-        if (canvas.renderMode == RenderMode.ScreenSpaceOverlay)
+        // 1. Get the ball's world position with an upward offset
+        Vector3 worldPos = transform.position + (Vector3.up * 0.5f);
+
+        // 2. CRITICAL FIX: Always use Camera.main to convert 3D world space to screen pixels
+        Vector3 screenPoint = Camera.main.WorldToScreenPoint(worldPos);
+
+        // If the ball is behind the camera, don't spawn the number
+        if (screenPoint.z < 0)
         {
-            rectTransform.position = screenPoint;
-        }
-        else
-        {
-            Vector2 localPoint;
-            RectTransformUtility.ScreenPointToLocalPointInRectangle(canvas.transform as RectTransform, screenPoint, canvas.worldCamera, out localPoint);
-            rectTransform.localPosition = localPoint;
+            Destroy(textObj);
+            return;
         }
 
+        // 3. Convert screen pixels to the Canvas's local coordinate space
+        Camera uiCamera = (hudCanvas.renderMode == RenderMode.ScreenSpaceOverlay) ? null : hudCanvas.worldCamera;
+
+        if (RectTransformUtility.ScreenPointToLocalPointInRectangle(hudCanvas.transform as RectTransform, screenPoint, uiCamera, out Vector2 localPoint))
+        {
+            rectTransform.anchoredPosition = localPoint;
+        }
+
+        // Configure TextMeshPro
         TMPro.TextMeshProUGUI tmp = textObj.AddComponent<TMPro.TextMeshProUGUI>();
-        tmp.text = Mathf.Abs(Mathf.RoundToInt(damage)).ToString();
-        tmp.fontSize = 22;
+        tmp.fontSize = 24; // Will scale dynamically with your 720x720 Reference Resolution CanvasScaler
         tmp.alignment = TMPro.TextAlignmentOptions.Center;
 
         // Apply custom colors based on damage type
@@ -219,26 +260,53 @@ public class Ball : MonoBehaviour
                 break;
         }
 
-        textObj.AddComponent<DamageNumberAnimator>();
+        activeDamageNumberObj = textObj;
+        activeDamageAnimator = textObj.AddComponent<DamageNumberAnimator>();
+
+        // Set initial damage value and update timestamp
+        activeDamageAnimator.SetInitialDamage(damage);
+        lastDamageNumberTime = Time.time;
     }
 
     public class DamageNumberAnimator : MonoBehaviour
     {
-        readonly private float duration = 1.2f;
+        private readonly float duration = 1.2f;
         private float elapsed = 0f;
         private float vx;
         private float vy;
         private RectTransform rect;
         private TMPro.TextMeshProUGUI tmp;
+        private float accumulatedDamage = 0f;
 
         void Start()
         {
             rect = GetComponent<RectTransform>();
             tmp = GetComponent<TMPro.TextMeshProUGUI>();
 
-            // Scaled up for UI pixel space
             vx = UnityEngine.Random.Range(-50f, 50f);
             vy = UnityEngine.Random.Range(150f, 250f);
+        }
+
+        public void SetInitialDamage(float damage)
+        {
+            accumulatedDamage = damage;
+            UpdateTextDisplay();
+        }
+
+        public void AddDamage(float damage)
+        {
+            accumulatedDamage += damage;
+            // Optional: Reset the fade/elapsed time slightly or keep it running smoothly
+            elapsed = Mathf.Max(0f, elapsed - 0.2f);
+            UpdateTextDisplay();
+        }
+
+        private void UpdateTextDisplay()
+        {
+            if (tmp != null)
+            {
+                tmp.text = Mathf.Abs(Mathf.RoundToInt(accumulatedDamage)).ToString();
+            }
         }
 
         void Update()
@@ -252,12 +320,9 @@ public class Ball : MonoBehaviour
                 return;
             }
 
-            // Apply gravity in pixels/sec^2
             vy -= 400f * dt;
-
             rect.localPosition += new Vector3(vx * dt, vy * dt, 0);
 
-            // Fade out alpha over time
             if (tmp != null)
             {
                 Color c = tmp.color;

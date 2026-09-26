@@ -30,6 +30,11 @@ public class FlatLandscape : MonoBehaviour
     private Color[] targetColors;
     private Vector3[,] baseGrid;
 
+    public void SetOffset(Vector2 offset)
+    {
+        transform.position = new Vector3(offset.x, offset.y, transform.position.z);
+    }
+
     void Start()
     {
         mesh = new Mesh();

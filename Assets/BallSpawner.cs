@@ -30,6 +30,10 @@ public class BallSpawner : MonoBehaviour
     public LineRenderer wallLineRenderer;
     private Vector2[] wallPoints;
 
+    [Header("Camera")]
+    [SerializeField] private CameraShake cameraShake;
+    [SerializeField] private Canvas canvas;
+
     private float timer;
     public List<Ball> balls = new List<Ball>();
 
@@ -245,7 +249,7 @@ public class BallSpawner : MonoBehaviour
         ballObj.transform.position = spawnPos;
 
         Ball ball = ballObj.AddComponent<Ball>();
-        ball.Initialize(type, resolution, this, healthMultiplier, ballSounds);
+        ball.Initialize(type, resolution, this, healthMultiplier, ballSounds, cameraShake, canvas);
 
         balls.Add(ball);
         return ballObj;

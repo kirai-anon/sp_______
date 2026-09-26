@@ -726,12 +726,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0cd44c1031e13a943bb63640046fad76, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.CanvasScaler
-  m_UiScaleMode: 0
+  m_UiScaleMode: 1
   m_ReferencePixelsPerUnit: 50
   m_ScaleFactor: 1
-  m_ReferenceResolution: {x: 1000, y: 1000}
+  m_ReferenceResolution: {x: 720, y: 720}
   m_ScreenMatchMode: 0
-  m_MatchWidthOrHeight: 1
+  m_MatchWidthOrHeight: 0.5
   m_PhysicalUnit: 3
   m_FallbackScreenDPI: 96
   m_DefaultSpriteDPI: 96
@@ -831,6 +831,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 96b30c86c948eb74a950f00a3a584fe2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Player
+  cameraShake: {fileID: 519420033}
+  flatLandscape: {fileID: 1788032556}
   bulletPrefab: {fileID: 6287273828702234544, guid: d6b3b907883f2c54a80b593b13625012, type: 3}
   ballSpawner: {fileID: 977599861}
   initPlayerHealth: 1
@@ -914,6 +916,8 @@ MonoBehaviour:
   - {fileID: 8300000, guid: c5212f47938c7a3448a6473aa3557adb, type: 3}
   - {fileID: 8300000, guid: c5212f47938c7a3448a6473aa3557adb, type: 3}
   wallLineRenderer: {fileID: 1082872222}
+  cameraShake: {fileID: 519420033}
+  canvas: {fileID: 702421705}
   balls: []
   currencyDrops: []
 --- !u!4 &977599862
