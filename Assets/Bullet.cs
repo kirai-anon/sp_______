@@ -6,14 +6,14 @@ public class Bullet : MonoBehaviour
     [SerializeField] private float speed = 20f;
 
     private float bulletDamage;
-    private int lightningDamage;
+    private float lightningDamage;
     private int lightningBounces;
     private float poisonDamagePerSec;
     private float poisonDuration;
     private BallSpawner ballSpawner;
     private bool hasHit = false;
 
-    public void Initialize(float dmg, int ltnDmg, int ltnBounces, float poisonDps, float poisonDur, BallSpawner spawner)
+    public void Initialize(float dmg, float ltnDmg, int ltnBounces, float poisonDps, float poisonDur, BallSpawner spawner)
     {
         bulletDamage = dmg;
         lightningDamage = ltnDmg;

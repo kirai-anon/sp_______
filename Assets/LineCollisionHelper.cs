@@ -1,4 +1,6 @@
+using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.InputSystem.Processors;
 
 public static class LineCollisionHelper
 {
@@ -50,7 +52,7 @@ public static class LineCollisionHelper
                         if (Mathf.Abs(normal.y) > 0.7f && normal.y > 0) // roughly pointing up (floor)
                         {
                             velocity -= 2f * dot * normal;
-                            velocity.y = 12.0f;
+                            velocity = velocity.normalized * 12;
                         }
                         else
                         {

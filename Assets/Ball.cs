@@ -34,9 +34,7 @@ public class Ball : MonoBehaviour
 
     private CameraShake cameraShake;
 
-    private GameObject activeDamageNumberObj;
-    private DamageNumberAnimator activeDamageAnimator;
-    private float lastDamageNumberTime;
+    private List<DamageNumberAnimator> activeDamageAnimators = new List<DamageNumberAnimator>();
     private const float damageStackTimeLimit = 0.4f;
 
     private Canvas hudCanvas;
@@ -132,6 +130,8 @@ public class Ball : MonoBehaviour
 
             transform.position = pos;
         }
+        
+        spinVelocity = -velocity.x;
 
         transform.Rotate(0, 0, spinVelocity * dt * 31.41f);
         healthText.transform.rotation = Quaternion.Euler(0, 0, 0);
@@ -164,54 +164,28 @@ public class Ball : MonoBehaviour
 
     // ---- Damage ----
 
-    public void TakeDamage(float damage, DamageType damageType)
-    {
-        health -= damage;
-        healthText.text = Mathf.RoundToInt(health).ToString();
-
-        if (health <= 0)
-        {
-            AudioSource.PlayClipAtPoint(audioClips[4 + baseStrength], Camera.main.transform.position, 1.0f);
-            cameraShake.TriggerShake(0.3f, 0.15f * baseStrength);//duration,strenght
-        }
-        else
-        {
-            AudioSource.PlayClipAtPoint(audioClips[baseStrength], Camera.main.transform.position, 1.0f);
-        }
-
-        // Flash effect
-        if (damageFlashCoroutine != null)
-            StopCoroutine(damageFlashCoroutine);
-        damageFlashCoroutine = StartCoroutine(DamageFlash());
-
-        // Spawn floating damage number dynamically
-        SpawnDamageNumber(damage, damageType);
-
-        if (health <= 0) DestroyBall();
-        else { spawnHitParticles(transform.position); }
-    }
-
     private void SpawnDamageNumber(float damage, DamageType damageType)
     {
-        float timeSinceLastSpawn = Time.time - lastDamageNumberTime;
-
-        // Check if we can stack onto the existing active damage number
-        if (activeDamageAnimator != null && timeSinceLastSpawn <= damageStackTimeLimit)
-        {
-            activeDamageAnimator.AddDamage(damage);
-            lastDamageNumberTime = Time.time;
-            return;
-        }
-
-        // Fallback if not assigned in Inspector
         if (hudCanvas == null)
         {
             hudCanvas = FindFirstObjectByType<Canvas>();
         }
         if (hudCanvas == null || Camera.main == null) return;
 
-        // Create the damage number GameObject
-        GameObject textObj = new GameObject("DamageNumber");
+        // Clean up destroyed animators
+        activeDamageAnimators.RemoveAll(animator => animator == null);
+
+        // Find an open stack for this damage type
+        DamageNumberAnimator openAnimator = activeDamageAnimators.Find(a => a.Type == damageType && !a.IsClosed);
+
+        if (openAnimator != null)
+        {
+            openAnimator.AddDamage(damage);
+            return;
+        }
+
+        // --- Create a NEW damage number stack ---
+        GameObject textObj = new GameObject($"DamageNumber_{damageType}");
         textObj.transform.SetParent(hudCanvas.transform, false);
 
         RectTransform rectTransform = textObj.AddComponent<RectTransform>();
@@ -219,33 +193,28 @@ public class Ball : MonoBehaviour
         rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
         rectTransform.pivot = new Vector2(0.5f, 0.5f);
 
-        // 1. Get the ball's world position with an upward offset
-        Vector3 worldPos = transform.position + (Vector3.up * 0.5f);
-
-        // 2. CRITICAL FIX: Always use Camera.main to convert 3D world space to screen pixels
+        Vector3 worldPos = transform.position + (Vector3.up * (radius * 0.5f));
         Vector3 screenPoint = Camera.main.WorldToScreenPoint(worldPos);
 
-        // If the ball is behind the camera, don't spawn the number
         if (screenPoint.z < 0)
         {
             Destroy(textObj);
             return;
         }
 
-        // 3. Convert screen pixels to the Canvas's local coordinate space
+        RectTransform canvasRect = hudCanvas.transform as RectTransform;
         Camera uiCamera = (hudCanvas.renderMode == RenderMode.ScreenSpaceOverlay) ? null : hudCanvas.worldCamera;
 
-        if (RectTransformUtility.ScreenPointToLocalPointInRectangle(hudCanvas.transform as RectTransform, screenPoint, uiCamera, out Vector2 localPoint))
+        if (RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, screenPoint, uiCamera, out Vector2 localPoint))
         {
             rectTransform.anchoredPosition = localPoint;
         }
 
-        // Configure TextMeshPro
         TMPro.TextMeshProUGUI tmp = textObj.AddComponent<TMPro.TextMeshProUGUI>();
-        tmp.fontSize = 24; // Will scale dynamically with your 720x720 Reference Resolution CanvasScaler
+        tmp.fontSize = 21;
         tmp.alignment = TMPro.TextAlignmentOptions.Center;
+        tmp.raycastTarget = false;
 
-        // Apply custom colors based on damage type
         switch (damageType)
         {
             case DamageType.Lightning:
@@ -256,16 +225,14 @@ public class Ball : MonoBehaviour
                 break;
             case DamageType.Normal:
             default:
-                tmp.color = Color.softRed;
+                tmp.color = Color.paleVioletRed;
                 break;
         }
-
-        activeDamageNumberObj = textObj;
-        activeDamageAnimator = textObj.AddComponent<DamageNumberAnimator>();
-
-        // Set initial damage value and update timestamp
-        activeDamageAnimator.SetInitialDamage(damage);
-        lastDamageNumberTime = Time.time;
+        
+        // Attach animator component and set initial damage
+        DamageNumberAnimator animator = textObj.AddComponent<DamageNumberAnimator>();
+        animator.Initialize(damage, damageType, damageStackTimeLimit);
+        activeDamageAnimators.Add(animator);
     }
 
     public class DamageNumberAnimator : MonoBehaviour
@@ -277,27 +244,34 @@ public class Ball : MonoBehaviour
         private RectTransform rect;
         private TMPro.TextMeshProUGUI tmp;
         private float accumulatedDamage = 0f;
+        private float stackTimeLimit = 0.4f;
 
-        void Start()
+        public DamageType Type { get; private set; }
+        public float TimeSince { get; private set; }
+        public bool IsClosed { get; private set; } // <--- Tracks if this number is done receiving hits
+
+        public void Initialize(float initialDamage, DamageType damageType, float stackLimit)
         {
+            Type = damageType;
+            accumulatedDamage = initialDamage;
+            stackTimeLimit = stackLimit;
+            TimeSince = 0f;
+            IsClosed = false;
+
             rect = GetComponent<RectTransform>();
             tmp = GetComponent<TMPro.TextMeshProUGUI>();
 
-            vx = UnityEngine.Random.Range(-50f, 50f);
-            vy = UnityEngine.Random.Range(150f, 250f);
-        }
+            vx = UnityEngine.Random.Range(-40f, 40f);
+            vy = UnityEngine.Random.Range(100f, 180f);
 
-        public void SetInitialDamage(float damage)
-        {
-            accumulatedDamage = damage;
             UpdateTextDisplay();
         }
 
         public void AddDamage(float damage)
         {
+            if (IsClosed) return;
+
             accumulatedDamage += damage;
-            // Optional: Reset the fade/elapsed time slightly or keep it running smoothly
-            elapsed = Mathf.Max(0f, elapsed - 0.2f);
             UpdateTextDisplay();
         }
 
@@ -305,7 +279,7 @@ public class Ball : MonoBehaviour
         {
             if (tmp != null)
             {
-                tmp.text = Mathf.Abs(Mathf.RoundToInt(accumulatedDamage)).ToString();
+                tmp.text = Mathf.Abs(Mathf.RoundToInt(accumulatedDamage * 100) / 100).ToString(); // two decimals, looks like this: 1.00
             }
         }
 
@@ -313,6 +287,13 @@ public class Ball : MonoBehaviour
         {
             float dt = Time.deltaTime;
             elapsed += dt;
+            TimeSince += dt;
+
+            // Automatically close the stack once the time limit is reached
+            if (!IsClosed && TimeSince > stackTimeLimit)
+            {
+                IsClosed = true;
+            }
 
             if (elapsed >= duration)
             {
@@ -320,8 +301,11 @@ public class Ball : MonoBehaviour
                 return;
             }
 
-            vy -= 400f * dt;
-            rect.localPosition += new Vector3(vx * dt, vy * dt, 0);
+            vy -= 300f * dt;
+            if (rect != null)
+            {
+                rect.anchoredPosition += new Vector2(vx * dt, vy * dt);
+            }
 
             if (tmp != null)
             {
@@ -366,6 +350,37 @@ public class Ball : MonoBehaviour
         }
 
         spriteRenderer.color = color;
+    }
+
+    public void TakeDamage(float damage, DamageType damageType)
+    {
+        health -= damage;
+        healthText.text = Mathf.RoundToInt(health).ToString();
+
+        Vector3 soundPosition = Camera.main.transform.position +
+            new Vector3(transform.position.x, transform.position.y, 0) * 0.1f;
+        float soundPitch = Random.Range(0.9f, 1.1f);
+
+        if (health <= 0)
+        {
+            AudioHelper.PlayClipAtPoint(audioClips[4 + baseStrength], soundPosition, 1f, soundPitch);
+            cameraShake.TriggerShake(0.3f, 0.15f * baseStrength);//duration,strenght
+        }
+        else
+        {
+            AudioHelper.PlayClipAtPoint(audioClips[baseStrength], soundPosition, 1f, soundPitch);
+        }
+
+        // Flash effect
+        if (damageFlashCoroutine != null)
+            StopCoroutine(damageFlashCoroutine);
+        damageFlashCoroutine = StartCoroutine(DamageFlash());
+
+        // Spawn floating damage number dynamically
+        SpawnDamageNumber(damage, damageType);
+
+        if (health <= 0) DestroyBall();
+        else { spawnHitParticles(transform.position); }
     }
 
     // Poison and lightning bypass armor (full damage regardless)

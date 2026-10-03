@@ -12,7 +12,7 @@ public class GameManager : MonoBehaviour
     // Runtime upgrade values (computed from save)
     public float bulletDamage = 0;
     public float fireRate = 0.5f;
-    public int lightningDamage = 0;
+    public float lightningDamage = 0;
     public int lightningBounces = 0;  // 0 = lightning not bought
     public float poisonDamagePerSec = 0;
     public float poisonDuration = 0;  // 0 = poison not bought
@@ -128,7 +128,7 @@ public class GameManager : MonoBehaviour
         float fireRateLvl = save.GetLevel(UpgradeId.FireRate);
         fireRate = BASE_FIRE_RATE / (1f + fireRateLvl * 0.05f);
 
-        lightningDamage = save.GetLevel(UpgradeId.LightningDamage); // 0 if not bought
+        lightningDamage = Mathf.Pow(1 + save.GetLevel(UpgradeId.LightningDamage) / 10, 2); // 0 if not bought
 
         lightningBounces = save.GetLevel(UpgradeId.LightningBounces); // 0 if not bought at all
 

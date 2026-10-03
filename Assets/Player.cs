@@ -90,7 +90,7 @@ public class Player : MonoBehaviour
             wobbleTimer *= 0.8f;
         }
 
-            Vector3 pos = transform.position;
+        Vector3 pos = transform.position;
         pos.x = Mathf.Lerp(pos.x, mouseX, 0.2f);
         pos.y = -6f;
         transform.position = pos;
@@ -103,12 +103,12 @@ public class Player : MonoBehaviour
             new Vector2(Mathf.Cos(phaseTimer), Mathf.Sin(phaseTimer)) * 0.3f;
 
         cameraShake.SetOffset(offset);
-        flatLandscape.SetOffset(offset * 0.5f);
+        flatLandscape.SetOffset(offset * 0.75f);
     }
 
     private void Shoot()
     {
-        GameObject bullet = Instantiate(bulletPrefab, transform.position + new Vector3(0, 0.2f, 0), Quaternion.identity);
+        GameObject bullet = Instantiate(bulletPrefab, transform.position + new Vector3(0, 1, 0), Quaternion.identity);
         bullet.GetComponent<Bullet>().Initialize(
             GameManager.Instance.bulletDamage,
             GameManager.Instance.lightningDamage,
@@ -118,7 +118,10 @@ public class Player : MonoBehaviour
             ballSpawner
         );
 
-        AudioSource.PlayClipAtPoint(shootSound, Camera.main.transform.position, 1.0f);
+        Vector3 soundPosition = Camera.main.transform.position +
+            new Vector3(transform.position.x, transform.position.y, 0) * 0.1f;
+        float soundPitch = UnityEngine.Random.Range(0.95f, 1.05f);
+        AudioHelper.PlayClipAtPoint(shootSound, soundPosition, 1f, soundPitch);
     }
 
     void OnTriggerEnter2D(Collider2D other)

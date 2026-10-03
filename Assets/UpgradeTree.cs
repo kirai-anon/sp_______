@@ -14,9 +14,6 @@ public class UpgradeTree : MonoBehaviour
     [SerializeField] private TextMeshProUGUI currencyText;
     [SerializeField] private Button PlayButton;
 
-    [Header("Layout")]
-    [SerializeField] private Vector2 treeCenter = new Vector2(0, 0);
-
     private static readonly Color COL_ACTIVE = new Color(0.1f, 0.2f, 0.1f);
     private static readonly Color COL_AVAILABLE = new Color(0.2f, 0.2f, 0.1f);
     private static readonly Color COL_LOCKED = new Color(0.1f, 0.1f, 0.1f);
@@ -153,7 +150,7 @@ public class UpgradeTree : MonoBehaviour
         {
             float posX = upgrades[i].x;
             float posY = upgrades[i].y;
-            Vector2 pos = treeCenter + new Vector2(posX, posY);
+            Vector2 pos = new Vector2(posX, posY);
 
             nodeTransforms[i].anchoredPosition = pos;
         }
