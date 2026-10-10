@@ -1,10 +1,8 @@
-using Unity.VisualScripting;
 using UnityEngine;
-using UnityEngine.InputSystem.Processors;
 
 public static class LineCollisionHelper
 {
-    public static void ResolveCollisions(ref Vector3 pos, ref Vector2 velocity, float radius, Vector2[] wallPoints, bool isBallBounce = false, float lineThickness = 0f)
+    public static void ResolveCollisions(ref Vector3 pos, ref Vector2 velocity, float radius, Vector2[] wallPoints, bool isBallBounce = false, float lineThickness = 0f, bool isPlayer = false)
     {
         if (wallPoints == null || wallPoints.Length < 2) return;
 
@@ -43,32 +41,53 @@ public static class LineCollisionHelper
                 // Positional correction (push out to the surface of the thick line)
                 pos = closest + normal * effectiveRadius;
 
-                // Velocity response
-                float dot = Vector2.Dot(velocity, normal);
-                if (dot < 0)
+                if (isPlayer)
                 {
-                    if (isBallBounce)
+                    // Check if the surface normal is traversable (-90 to 90 degrees relative to up -> normal.y >= 0)
+                    if (normal.y < 0)
                     {
-                        if (Mathf.Abs(normal.y) > 0.7f && normal.y > 0) // roughly pointing up (floor)
+                        // Untraversable wall/ceiling (steeper than 90 degrees): push player back out of it horizontally/vertically
+                        continue;
+                    }
+
+                    // Return the valid surface normal via the velocity parameter for tilting
+                    velocity = normal;
+                    pos = closest + normal * effectiveRadius;
+                }
+                else
+                {
+                    // Velocity response
+                    float dot = Vector2.Dot(velocity, normal);
+                    if (dot < 0)
+                    {
+                        if (isBallBounce)
                         {
-                            velocity -= 2f * dot * normal;
-                            velocity = velocity.normalized * 12;
+                            if (Mathf.Abs(normal.y) > 0.5f && normal.y > 0) // roughly pointing up (floor)
+                            {
+                                velocity -= 2f * dot * normal;
+                                velocity = velocity.normalized * 12;
+                            }
+                            else if (normal.y > 0)
+                            {
+                                velocity -= 2f * dot * normal;
+                                velocity.y = -12;
+                            }
+                            else
+                            {
+                                velocity -= 2f * dot * normal;
+                            }
                         }
                         else
                         {
-                            velocity -= 2f * dot * normal;
+                            // Currency dampening bounce
+                            velocity -= (1f + 0.5f) * dot * normal;
                         }
-                    }
-                    else
-                    {
-                        // Currency dampening bounce
-                        velocity -= (1f + 0.5f) * dot * normal;
                     }
                 }
             }
         }
 
-        if (pos.y < -20)
+        if (pos.y < -12)
         {
             pos = new Vector3(0, 0, pos.z);
             velocity = new Vector2(velocity.x, 0);

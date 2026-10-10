@@ -173,7 +173,7 @@ public class UpgradeTree : MonoBehaviour
 
     private float CostValue(float baseCost, int index)
     {
-        return Mathf.Round(baseCost * Mathf.Pow(3f, index));
+        return Mathf.Round(baseCost * Mathf.Pow(2f, index));
     }
 
     private bool CanBuy(int index)
