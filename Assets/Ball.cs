@@ -279,7 +279,7 @@ public class Ball : MonoBehaviour
         {
             if (tmp != null)
             {
-                tmp.text = Mathf.Abs(Mathf.RoundToInt(accumulatedDamage * 100) / 100).ToString(); // two decimals, looks like this: 1.00
+                tmp.text = Mathf.Abs(accumulatedDamage).ToString("0.##"); // two decimals, looks like this: 1.00
             }
         }
 
@@ -355,7 +355,7 @@ public class Ball : MonoBehaviour
     public void TakeDamage(float damage, DamageType damageType)
     {
         health -= damage;
-        healthText.text = Mathf.RoundToInt(health).ToString();
+        healthText.text = health.ToString("0.##"); // x.00
 
         Vector3 soundPosition = Camera.main.transform.position +
             new Vector3(transform.position.x, transform.position.y, 0) * 0.1f;
@@ -461,9 +461,9 @@ public class Ball : MonoBehaviour
 
             // Accumulate fractional damage
             p.damageAccumulator += p.damagePerSec * dt;
-            if (p.damageAccumulator >= 1f)
+            if (p.damageAccumulator >= 0.4f)
             {
-                int dmg = (int)p.damageAccumulator;
+                float dmg = p.damageAccumulator;
                 p.damageAccumulator -= dmg;
                 TakeTrueDamage(dmg, DamageType.Poison);
                 if (health <= 0) return; // Already destroyed

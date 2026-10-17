@@ -21,14 +21,14 @@ public class UpgradeTree : MonoBehaviour
     // CHANGED: Replaced 'angle' and 'radius' with 'x' and 'y' position offsets
     private List<UpgradeData> upgrades = new List<UpgradeData>
     {
-        new UpgradeData { id = UpgradeId.BulletDamage,       name = "Bullet Damage",      cost = 10f, x = -150f, y =  150f },
-        new UpgradeData { id = UpgradeId.FireRate,           name = "Fire Rate",          cost = 10f, x =  -50f, y =  150f },
-        new UpgradeData { id = UpgradeId.LightningDamage,    name = "Lightning Dmg",      cost = 50f, x =   50f, y =  150f },
-        new UpgradeData { id = UpgradeId.LightningBounces,   name = "Lightning Bounces",  cost = 80f, x =  150f, y =  150f },
-        new UpgradeData { id = UpgradeId.PoisonDamagePerSec, name = "Poison Dmg/s",       cost = 60f, x = -150f, y =    0f },
-        new UpgradeData { id = UpgradeId.PoisonDuration,     name = "Poison Duration",    cost = 80f, x =  -50f, y =    0f },
-        new UpgradeData { id = UpgradeId.CurrencyMultiplier, name = "Currency Mult",      cost = 20f, x =   50f, y =    0f },
-        new UpgradeData { id = UpgradeId.PlayerHealth,       name = "Player Health",      cost = 10f, x =  150f, y =    0f }
+        new UpgradeData { id = UpgradeId.BulletDamage,       name = "Bullet Damage",      cost = 1f, x = -150f, y =  150f },
+        new UpgradeData { id = UpgradeId.FireRate,           name = "Fire Rate",          cost = 1f, x =  -50f, y =  150f },
+        new UpgradeData { id = UpgradeId.LightningDamage,    name = "Lightning Dmg",      cost = 3f, x =   50f, y =  150f },
+        new UpgradeData { id = UpgradeId.LightningBounces,   name = "Lightning Bounces",  cost = 3f, x =  150f, y =  150f },
+        new UpgradeData { id = UpgradeId.PoisonDamagePerSec, name = "Poison Dmg/s",       cost = 4f, x = -150f, y =    0f },
+        new UpgradeData { id = UpgradeId.PoisonDuration,     name = "Poison Duration",    cost = 4f, x =  -50f, y =    0f },
+        new UpgradeData { id = UpgradeId.CurrencyMultiplier, name = "Currency Mult",      cost = 3f, x =   50f, y =    0f },
+        new UpgradeData { id = UpgradeId.PlayerHealth,       name = "Player Health",      cost = 2f, x =  150f, y =    0f }
     };
 
     private List<RectTransform> nodeTransforms = new List<RectTransform>();

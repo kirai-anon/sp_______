@@ -44,6 +44,25 @@ MonoBehaviour:
   texture:
     m_OverrideState: 0
     m_Value: {fileID: 0}
+--- !u!114 &-3153336213522926934
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 0}
+  m_Name: VisualDelayVolume
+  m_EditorClassIdentifier: Assembly-CSharp::VisualDelayVolume
+  active: 1
+  delay:
+    m_OverrideState: 1
+    m_Value: 0.8
+  intensity:
+    m_OverrideState: 1
+    m_Value: 0.7
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -57,12 +76,12 @@ MonoBehaviour:
   m_Name: Global Volume Profile
   m_EditorClassIdentifier: Unity.RenderPipelines.Core.Runtime::UnityEngine.Rendering.VolumeProfile
   components:
-  - {fileID: -8880597925810726131}
   - {fileID: 6305064435512308273}
   - {fileID: -7383867058787686798}
   - {fileID: 795722337136173171}
   - {fileID: 7544764269195815023}
   - {fileID: 6682755418785184984}
+  - {fileID: -3153336213522926934}
 --- !u!114 &795722337136173171
 MonoBehaviour:
   m_ObjectHideFlags: 3

@@ -62,7 +62,7 @@ public static class LineCollisionHelper
                     {
                         if (isBallBounce)
                         {
-                            if (Mathf.Abs(normal.y) > 0.5f && normal.y > 0) // roughly pointing up (floor)
+                            if (Mathf.Abs(normal.y) > 0.67f && normal.y > 0) // roughly pointing up (floor)
                             {
                                 velocity -= 2f * dot * normal;
                                 velocity = velocity.normalized * 12;

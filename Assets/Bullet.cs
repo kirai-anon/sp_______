@@ -1,5 +1,7 @@
 using UnityEngine;
 using System.Collections.Generic;
+using System.Collections;
+using Unity.Mathematics;
 
 public class Bullet : MonoBehaviour
 {
@@ -97,25 +99,117 @@ public class Bullet : MonoBehaviour
         }
     }
 
-    private void DrawContinuousLightning(List<Vector3> positions)
+    public void DrawContinuousLightning(List<Vector3> basePoints)
     {
+        if (basePoints == null || basePoints.Count < 2) return;
+
         GameObject lightningObj = new GameObject("ContinuousLightning");
         LineRenderer lr = lightningObj.AddComponent<LineRenderer>();
 
-        // Set the points to match our recorded chain length
-        lr.positionCount = positions.Count;
-        lr.SetPositions(positions.ToArray());
+        List<Vector3> fullLightningPositions = new List<Vector3>();
+
+        // Iterate through each pair of points in the user's base chain
+        for (int i = 0; i < basePoints.Count - 1; i++)
+        {
+            Vector3 segmentStart = basePoints[i];
+            Vector3 segmentEnd = basePoints[i + 1];
+
+            // Generate jagged sub-points for this specific segment
+            // Parameters: start, end, displacement, generations
+            List<Vector3> segmentPoints = GenerateLightningPath(segmentStart, segmentEnd, 0.3f, 3);
+
+            // If this isn't the first segment, remove the first point 
+            // to prevent duplicate overlapping vertices where segments connect
+            if (i > 0 && segmentPoints.Count > 0)
+            {
+                segmentPoints.RemoveAt(0);
+            }
+
+            fullLightningPositions.AddRange(segmentPoints);
+        }
+
+        // Apply points to the LineRenderer
+        lr.positionCount = fullLightningPositions.Count;
+        lr.SetPositions(fullLightningPositions.ToArray());
 
         // Styling
-        lr.startWidth = 0.05f;
-        lr.endWidth = 0.05f;
+        lr.startWidth = 0.07f;
+        lr.endWidth = 0.07f;
         lr.useWorldSpace = true;
 
-        // Fix the deletion bug: Use a simple mobile or unlit material to avoid leaking material instances
+        // Material and Color
         lr.material = new Material(Shader.Find("Sprites/Default"));
-        lr.material.color = new Color(0.5f, 0.9f, 1f);
+        Color lightningColor = new Color(1f, 1f, 1f); // Electric blue-white
+        lr.startColor = lightningColor;
+        lr.endColor = lightningColor;
 
-        // This will cleanly delete the entire chain after 0.15 seconds
-        Destroy(lightningObj, 0.15f);
+        // Start the fade and destroy coroutine
+        LightningFade fader = lightningObj.AddComponent<LightningFade>();
+        fader.Initialize(lr, 0.3f);
+    }
+
+    private List<Vector3> GenerateLightningPath(Vector3 start, Vector3 end, float displacement, int generations)
+    {
+        List<Vector3> points = new List<Vector3> { start, end };
+
+        float x_d = (end.x - start.x);
+        float y_d = (end.y - start.y);
+        float dist = math.sqrt(math.pow(x_d,2)+math.pow(y_d,2));
+
+        for (int i = 0; i < generations; i++)
+        {
+            List<Vector3> nextPoints = new List<Vector3>();
+            for (int j = 0; j < points.Count - 1; j++)
+            {
+                Vector3 p1 = points[j];
+                Vector3 p2 = points[j + 1];
+
+                Vector3 mid = (p1 + p2) * 0.5f;
+                Vector3 randomOffset = displacement * dist * UnityEngine.Random.insideUnitSphere;
+                mid += randomOffset;
+
+                nextPoints.Add(p1);
+                nextPoints.Add(mid);
+            }
+            nextPoints.Add(points[points.Count - 1]);
+            points = nextPoints;
+            displacement *= 0.5f;
+        }
+
+        return points;
+    }
+
+    // Helper component to handle fading over time
+    public class LightningFade : MonoBehaviour
+    {
+        private LineRenderer lineRenderer;
+        private float duration;
+        private float elapsedTime;
+        private Color initialColor;
+
+        public void Initialize(LineRenderer lr, float lifeTime)
+        {
+            lineRenderer = lr;
+            duration = lifeTime;
+            initialColor = lr.startColor;
+            StartCoroutine(FadeRoutine());
+        }
+
+        private IEnumerator FadeRoutine()
+        {
+            while (elapsedTime < duration)
+            {
+                elapsedTime += Time.deltaTime;
+                float alpha = Mathf.Lerp(1f, 0f, elapsedTime / duration);
+
+                Color fadedColor = new Color(initialColor.r, initialColor.g, initialColor.b, alpha);
+                lineRenderer.startColor = fadedColor;
+                lineRenderer.endColor = fadedColor;
+
+                yield return null;
+            }
+
+            Destroy(gameObject);
+        }
     }
 }

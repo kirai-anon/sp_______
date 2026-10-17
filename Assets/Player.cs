@@ -64,12 +64,6 @@ public class Player : MonoBehaviour
 
                     wobbleTimer += Time.deltaTime;
                     wobbleTimer %= math.PI * 2;
-                    body.transform.position =
-                        new Vector3(
-                            transform.position.x,
-                            transform.position.y + math.cos(wobbleTimer * 29) * 0.13f,
-                            transform.position.z
-                        );
                 }
             }
 
@@ -87,10 +81,21 @@ public class Player : MonoBehaviour
         {
             ResetPlayer();
         }
+        
+        body.transform.position =
+            new Vector3(
+                transform.position.x,
+                transform.position.y + math.cos(wobbleTimer * 29) * 0.13f,
+                transform.position.z
+            );
 
         if (!Input.GetKey(KeyCode.Mouse0))
         {
-            wobbleTimer *= 0.8f;
+            float x_ = math.cos(wobbleTimer);
+            float y_ = math.sin(wobbleTimer);
+            float x_e = x_ + (math.cos(0) - x_) * 0.2f;
+            float y_e = y_ + (math.sin(0) - y_) * 0.2f;
+            wobbleTimer = math.atan2(y_e, x_e);
         }
 
         UpdatePlayer(wallPoints, mouseX);
@@ -110,7 +115,6 @@ public class Player : MonoBehaviour
     {
         if (wallLineRenderer == null || wallLineRenderer.positionCount < 2) return;
 
-        // 1. Extract Vector2 points from the LineRenderer and find absolute line bounds
         int count = wallLineRenderer.positionCount;
         Vector2[] wallPoints = new Vector2[count];
         float minLineX = float.MaxValue;
@@ -125,16 +129,15 @@ public class Player : MonoBehaviour
         }
 
         float halfWheelBase = 1.0f;
-        float totalOffset = 0.5f + 0.75f; // 1.25 units total from wheel midpoint to visual center
+        float totalOffset = 1.0f; // from wheel to visual center
 
-        // 2. Smoothly move the car's center X directly towards the mouse (no normal feedback loop = no jitter)
+        // move the tank's center x directly towards the mouse
         float currentX = transform.position.x;
         float targetX = Mathf.Lerp(currentX, mouseX, 0.2f);
 
-        // Clamp center X so the wheels never fall off the ends of the line
+        // clamp center x so the wheels never fall off the ends of the line
         targetX = Mathf.Clamp(targetX, minLineX + halfWheelBase, maxLineX - halfWheelBase);
 
-        // 3. Robust, fail-safe line sampling method for the wheels
         bool GetWheelContact(float queryX, out Vector2 contactPoint, out Vector2 normal, out bool traversable)
         {
             contactPoint = Vector2.zero;
@@ -187,29 +190,29 @@ public class Player : MonoBehaviour
             normal = new Vector2(-dir.y, dir.x);
             if (normal.y < 0) normal = -normal;
 
-            // Traversable rule: -90 to 90 degrees relative to up
+            // traversable rule: -90 to 90 degrees relative to up
             traversable = (normal.y >= 0);
             return true;
         }
 
-        // 4. Position the left and right wheels relative to the stable targetX
+        // position the left and right wheels relative to targetX
         float leftX = targetX - halfWheelBase;
         float rightX = targetX + halfWheelBase;
 
         GetWheelContact(leftX, out Vector2 leftWheel, out Vector2 normalL, out bool travL);
         GetWheelContact(rightX, out Vector2 rightWheel, out Vector2 normalR, out bool travR);
 
-        // 5. Calculate final position and rotation smoothly
+        // calculate final position and rotation
         Vector2 wheelMidpoint = (leftWheel + rightWheel) * 0.5f;
         Vector2 avgNormal = ((travL ? normalL : Vector2.up) + (travR ? normalR : Vector2.up)).normalized;
 
-        // Apply stable X from mouse lerp, and calculate Y using the wheel midpoint + offset
+        // apply x from mouse lerp and calculate y using wheel math
         Vector3 pos = new Vector3(targetX, wheelMidpoint.y + (avgNormal.y * totalOffset), transform.position.z);
 
         // Smoothly apply position
         transform.position = pos;
 
-        // Orient the car based on the wheel vector
+        // orient the tank
         Vector2 wheelDirection = (rightWheel - leftWheel).normalized;
         if (wheelDirection.sqrMagnitude > 0.0001f)
         {
