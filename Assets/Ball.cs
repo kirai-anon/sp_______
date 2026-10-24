@@ -215,20 +215,13 @@ public class Ball : MonoBehaviour
         tmp.alignment = TMPro.TextAlignmentOptions.Center;
         tmp.raycastTarget = false;
 
-        switch (damageType)
+        tmp.color = damageType switch
         {
-            case DamageType.Lightning:
-                tmp.color = Color.lightCyan;
-                break;
-            case DamageType.Poison:
-                tmp.color = Color.mediumPurple;
-                break;
-            case DamageType.Normal:
-            default:
-                tmp.color = Color.paleVioletRed;
-                break;
-        }
-        
+            DamageType.Lightning => Color.lightCyan,
+            DamageType.Poison => Color.mediumPurple,
+            _ => Color.paleVioletRed,
+        };
+
         // Attach animator component and set initial damage
         DamageNumberAnimator animator = textObj.AddComponent<DamageNumberAnimator>();
         animator.Initialize(damage, damageType, damageStackTimeLimit);
@@ -316,36 +309,37 @@ public class Ball : MonoBehaviour
         }
     }
 
-    private System.Collections.IEnumerator DamageFlash()
+    private System.Collections.IEnumerator DamageFlash(float strength)
     {
+        // If strength is 0 or less, don't play the flash effect
+        if (strength <= 0f) yield break;
+
+        // Map strength: 0 = original color, 0.5 = red, 1 = white
+        Color peakColor = (strength <= 0.5f)
+            ? Color.Lerp(color, Color.red, strength * 2f)
+            : Color.Lerp(Color.red, Color.white, (strength - 0.5f) * 2f);
+
+
         float elapsed = 0f;
+        float inDuration = 0.02f;
+        float outDuration = 0.1f;
 
-        // Flash white
-        while (elapsed < 0.02f)
+        // Flash into the calculated peak color
+        while (elapsed < inDuration)
         {
             elapsed += Time.deltaTime;
-            float t = elapsed / 0.02f;
-            spriteRenderer.color = Color.Lerp(color, Color.white, t);
+            float t = elapsed / inDuration;
+            spriteRenderer.color = Color.Lerp(color, peakColor, t);
             yield return null;
         }
 
-        // Ease into red
+        // Return back to the original color
         elapsed = 0f;
-        while (elapsed < 0.05f)
+        while (elapsed < outDuration)
         {
             elapsed += Time.deltaTime;
-            float t = elapsed / 0.05f;
-            spriteRenderer.color = Color.Lerp(Color.white, Color.red, t);
-            yield return null;
-        }
-
-        // Back to original
-        elapsed = 0f;
-        while (elapsed < 0.054f)
-        {
-            elapsed += Time.deltaTime;
-            float t = elapsed / 0.05f;
-            spriteRenderer.color = Color.Lerp(Color.red, color, t);
+            float t = elapsed / outDuration;
+            spriteRenderer.color = Color.Lerp(peakColor, color, t);
             yield return null;
         }
 
@@ -354,8 +348,15 @@ public class Ball : MonoBehaviour
 
     public void TakeDamage(float damage, DamageType damageType)
     {
+        TakeTrueDamage(damage, damageType); // Currently same, but will be reduced if armor is added later
+    }
+
+    public void TakeTrueDamage(float damage, DamageType damageType)
+    {
         health -= damage;
-        healthText.text = health.ToString("0.##"); // x.00
+        healthText.text = Mathf.Ceil(health).ToString();
+
+        float eff_strength = 0.45f * Mathf.Cos((damage / health + 1) * Mathf.PI) + 0.55f;
 
         Vector3 soundPosition = Camera.main.transform.position +
             new Vector3(transform.position.x, transform.position.y, 0) * 0.1f;
@@ -368,25 +369,19 @@ public class Ball : MonoBehaviour
         }
         else
         {
-            AudioHelper.PlayClipAtPoint(audioClips[baseStrength], soundPosition, 1f, soundPitch);
+            AudioHelper.PlayClipAtPoint(audioClips[baseStrength], soundPosition, eff_strength, soundPitch);
         }
 
         // Flash effect
         if (damageFlashCoroutine != null)
             StopCoroutine(damageFlashCoroutine);
-        damageFlashCoroutine = StartCoroutine(DamageFlash());
+        damageFlashCoroutine = StartCoroutine(DamageFlash(eff_strength));
 
         // Spawn floating damage number dynamically
         SpawnDamageNumber(damage, damageType);
 
         if (health <= 0) DestroyBall();
         else { spawnHitParticles(transform.position); }
-    }
-
-    // Poison and lightning bypass armor (full damage regardless)
-    public void TakeTrueDamage(float damage, DamageType damageType)
-    {
-        TakeDamage(damage, damageType); // Currently same, but won't be reduced if armor is added later
     }
 
     public void DestroyBall()
@@ -460,11 +455,13 @@ public class Ball : MonoBehaviour
             p.elapsed += dt;
 
             // Accumulate fractional damage
-            p.damageAccumulator += p.damagePerSec * dt;
-            if (p.damageAccumulator >= 0.4f)
+            p.damageAccumulator += dt;
+            if (p.damageAccumulator >= 0.3f)
             {
-                float dmg = p.damageAccumulator;
-                p.damageAccumulator -= dmg;
+                float time = p.damageAccumulator;
+                float dmg = p.damagePerSec * time;
+                p.damageAccumulator = 0f;
+
                 TakeTrueDamage(dmg, DamageType.Poison);
                 if (health <= 0) return; // Already destroyed
             }

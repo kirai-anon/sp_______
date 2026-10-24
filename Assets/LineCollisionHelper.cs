@@ -62,19 +62,36 @@ public static class LineCollisionHelper
                     {
                         if (isBallBounce)
                         {
-                            if (Mathf.Abs(normal.y) > 0.67f && normal.y > 0) // roughly pointing up (floor)
+                            // 1. Calculate the standard bounce vector first to see where the player wants to deflect
+                            Vector2 bouncedVelocity = velocity - 2f * dot * normal;
+
+                            float xVelAbs = Mathf.Abs(bouncedVelocity.x);
+                            float yVelAbs = Mathf.Abs(bouncedVelocity.y);
+
+                            float bS = 14f;
+
+                            // 2. Filter by surface type
+                            if (normal.y > 0.71f) // Walkable Floor / Shallow Slope
                             {
-                                velocity -= 2f * dot * normal;
-                                velocity = velocity.normalized * 12;
+                                // Apply your speed rules to the resulting deflection
+                                if (yVelAbs >= xVelAbs)
+                                {
+                                    velocity = bouncedVelocity.normalized * bS;
+                                }
+                                else // yvel is smaller than xvel
+                                {
+                                    bouncedVelocity.y = bS;
+                                    velocity = bouncedVelocity.normalized * bS;
+                                }
                             }
-                            else if (normal.y > 0)
+                            else if (normal.y > 0) // Steep Wall / Side of a slope pointing up
                             {
-                                velocity -= 2f * dot * normal;
-                                velocity.y = -12;
+                                bouncedVelocity.y = bS;
+                                velocity = bouncedVelocity.normalized * bS;
                             }
-                            else
+                            else // Ceiling / Roof (normal.y <= 0)
                             {
-                                velocity -= 2f * dot * normal;
+                                velocity = bouncedVelocity;
                             }
                         }
                         else
@@ -87,7 +104,7 @@ public static class LineCollisionHelper
             }
         }
 
-        if (pos.y < -12)
+        if (pos.y < -48)
         {
             pos = new Vector3(0, 0, pos.z);
             velocity = new Vector2(velocity.x, 0);
