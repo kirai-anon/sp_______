@@ -132,7 +132,7 @@ public class GameManager : MonoBehaviour
 
         lightningBounces = save.GetLevel(UpgradeId.LightningBounces); // 0 if not bought at all
 
-        poisonDamagePerSec = save.GetLevel(UpgradeId.PoisonDamagePerSec); // 0 if not bought
+        poisonDamagePerSec = Mathf.Pow(save.GetLevel(UpgradeId.PoisonDamagePerSec) / 10, 2); // 0 if not bought 
 
         int poisonDurationLvl = save.GetLevel(UpgradeId.PoisonDuration);
         poisonDuration = poisonDurationLvl > 0 ? 1f + (poisonDurationLvl - 1) * 0.5f : 1f;

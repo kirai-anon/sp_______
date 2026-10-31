@@ -11,6 +11,7 @@ public class Ball : MonoBehaviour
     private int sides;
 
     private int baseStrength;
+    private int selfHealthMult;
 
     private SpriteRenderer spriteRenderer;
     private Coroutine damageFlashCoroutine;
@@ -82,6 +83,7 @@ public class Ball : MonoBehaviour
 
         health = health * hpMult;
         maxHealth = health;
+        selfHealthMult = hpMult;
 
         SpriteRenderer sr = gameObject.AddComponent<SpriteRenderer>();
         sr.sprite = CreatePolygonSprite(sides, radius, color, resolution);
@@ -315,14 +317,11 @@ public class Ball : MonoBehaviour
         if (strength <= 0f) yield break;
 
         // Map strength: 0 = original color, 0.5 = red, 1 = white
-        Color peakColor = (strength <= 0.5f)
-            ? Color.Lerp(color, Color.red, strength * 2f)
-            : Color.Lerp(Color.red, Color.white, (strength - 0.5f) * 2f);
-
+        Color peakColor = Color.Lerp(Color.red, Color.white, strength);
 
         float elapsed = 0f;
         float inDuration = 0.02f;
-        float outDuration = 0.1f;
+        float outDuration = 0.08f;
 
         // Flash into the calculated peak color
         while (elapsed < inDuration)
@@ -386,7 +385,7 @@ public class Ball : MonoBehaviour
 
     public void DestroyBall()
     {
-        int totalValue = Mathf.CeilToInt(maxHealth / 2f) * 500;
+        int totalValue = Mathf.RoundToInt(Mathf.CeilToInt(maxHealth / 2f) * GameManager.Instance.currencyMultiplier * 500);
         Vector3 pos = transform.position;
 
         SpawnDeathParticles(pos);
@@ -415,24 +414,23 @@ public class Ball : MonoBehaviour
         {
             default:
                 break; // end instantly
-
             case BallType.Pentagon:
-                for (int i = 0; i < 2; i++) { var b = spawner.SpawnBall(BallType.Dodecagon, pos); }
+                for (int i = 0; i < 3; i++) { spawner.SpawnBall(BallType.Dodecagon, pos, selfHealthMult); }
                 break;
             case BallType.Octagon:
-                for (int i = 0; i < 2; i++) { var b = spawner.SpawnBall(BallType.Tetragon, pos); }
+                for (int i = 0; i < 2; i++) { spawner.SpawnBall(BallType.Tetragon, pos, selfHealthMult); }
                 break;
             case BallType.Icotetrasagon:
-                for (int i = 0; i < 2; i++) { var b = spawner.SpawnBall(BallType.Octagon, pos); }
+                for (int i = 0; i < 2; i++) { spawner.SpawnBall(BallType.Octagon, pos, selfHealthMult); }
                 break;
             case BallType.Hexacontatetragon:
-                for (int i = 0; i < 2; i++) { var b = spawner.SpawnBall(BallType.Icotetrasagon, pos); }
+                for (int i = 0; i < 2; i++) { spawner.SpawnBall(BallType.Icotetrasagon, pos, selfHealthMult); }
                 break;
             case BallType.Chiliaicositetragon:
-                for (int i = 0; i < 2; i++) { var b = spawner.SpawnBall(BallType.Hexacontatetragon, pos); }
+                for (int i = 0; i < 2; i++) { spawner.SpawnBall(BallType.Hexacontatetragon, pos, selfHealthMult); }
                 break;
             case BallType.Hexacontapentachiliapentacosiatriacontahexagon:
-                for (int i = 0; i < 2; i++) { var b = spawner.SpawnBall(BallType.Chiliaicositetragon, pos); }
+                for (int i = 0; i < 2; i++) { spawner.SpawnBall(BallType.Chiliaicositetragon, pos, selfHealthMult); }
                 break;
         }
 

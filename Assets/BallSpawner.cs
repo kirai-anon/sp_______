@@ -180,58 +180,52 @@ public class BallSpawner : MonoBehaviour
                 }
                 else
                 {
-                    switch (healthMultiplier)
+                    if (healthMultiplier % 4 != 0)
                     {
-                        case < 4:
-                            {
-                                // if health multiplier is too low just skip the wave and DO NOT spawn a rift
-                                NextWave();
-                                timer = 1f;
-                                break;
-                            }
-                        case >= 4:
-                            {
-                                isRiftActive = true;
-                                GameObject riftObj = Instantiate(riftPrefab, new Vector3(spawnPos.x, spawnPos.y, 1), Quaternion.identity);
-                                RiftEffect rift = riftObj.GetComponent<RiftEffect>();
+                        NextWave();
+                        timer = 1f;
+                    }
+                    else
+                    {
+                        isRiftActive = true;
+                        GameObject riftObj = Instantiate(riftPrefab, new Vector3(spawnPos.x, spawnPos.y, 1), Quaternion.identity);
+                        RiftEffect rift = riftObj.GetComponent<RiftEffect>();
 
-                                StartCoroutine(rift.RunRiftAnimation(
-                                    () =>
+                        StartCoroutine(rift.RunRiftAnimation(
+                            () =>
+                            {
+                                // starts at 2^2
+                                BallType[] ballTypes = new[]
+                                {
+                            BallType.Hexacontatetragon, // 4
+                            BallType.Chiliaicositetragon, // 8
+                            BallType.Hexacontapentachiliapentacosiatriacontahexagon, // 16
+                            BallType.Hexacontapentachiliapentacosiatriacontahexagon, // 32
+                            BallType.Hexadecamegaheptacosiaheptacontaheptachiliadiacosiahexadecagon, // 64
+                            BallType.Disgigahectatetracontaheptamegatetractamyriatriacontaoctachiliahexahectatetracontaheptagon // 128
+                                };
+                                int startFactor = healthMultiplier >= (1 << (ballTypes.Length + 2))
+                                    ? 1 << (ballTypes.Length + 1)
+                                    : healthMultiplier;
+                                int startIndex = Mathf.Min((int)math.log2(startFactor) - 2, ballTypes.Length - 1);
+                                for (int i = startIndex; i >= 0; i--)
+                                {
+                                    int factor = 1 << (i + 2);
+                                    if (healthMultiplier % factor == 0)
                                     {
-                                        // starts at 2^2
-                                        BallType[] ballTypes = new[]
-                                        {
-                                            BallType.Hexacontatetragon, // 4
-                                            BallType.Chiliaicositetragon, // 8
-                                            BallType.Hexacontapentachiliapentacosiatriacontahexagon, // 16
-                                            BallType.Hexacontapentachiliapentacosiatriacontahexagon, // 32
-                                            BallType.Hexadecamegaheptacosiaheptacontaheptachiliadiacosiahexadecagon, // 64
-                                            BallType.Disgigahectatetracontaheptamegatetractamyriatriacontaoctachiliahexahectatetracontaheptagon // 128
-                                        };
-                                        int startFactor = healthMultiplier >= (1 << (ballTypes.Length + 2))
-                                            ? 1 << (ballTypes.Length + 1)
-                                            : healthMultiplier;
-                                        int startIndex = Mathf.Min((int)math.log2(startFactor) - 2, ballTypes.Length - 1);
-                                        for (int i = startIndex; i >= 0; i--)
-                                        {
-                                            int factor = 1 << (i + 2);
-                                            if (healthMultiplier % factor == 0)
-                                            {
-                                                SpawnBall(ballTypes[i], spawnPos);
-                                            }
-                                        }
-                                    },
-                                    () =>
-                                    {
-                                        isRiftActive = false;
-                                        // advance the wave only after it finishes completely
-                                        NextWave();
+                                        SpawnBall(ballTypes[i], spawnPos);
                                     }
-                                ));
-
-                                timer = 0f;
-                                break;
+                                }
+                            },
+                            () =>
+                            {
+                                isRiftActive = false;
+                                // advance the wave only after it finishes completely
+                                NextWave();
                             }
+                        ));
+
+                        timer = 0f;
                     }
                 }
             }
@@ -243,13 +237,15 @@ public class BallSpawner : MonoBehaviour
     }
 
 
-    public GameObject SpawnBall(BallType type, Vector2 spawnPos)
+    public GameObject SpawnBall(BallType type, Vector2 spawnPos, int hMult = -1)
     {
+        if (hMult == -1) hMult = healthMultiplier;
+
         GameObject ballObj = new GameObject($"Ball_{type}");
         ballObj.transform.position = spawnPos;
 
         Ball ball = ballObj.AddComponent<Ball>();
-        ball.Initialize(type, resolution, this, healthMultiplier, ballSounds, cameraShake, canvas);
+        ball.Initialize(type, resolution, this, hMult, ballSounds, cameraShake, canvas);
 
         balls.Add(ball);
         return ballObj;

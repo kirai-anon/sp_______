@@ -20,7 +20,8 @@ public class Player : MonoBehaviour
 
     [SerializeField] private GameObject body;
 
-    private float wobbleTimer;
+    private float shootRecoilAmount = 0f;
+    private float shootRecoilVelocity = 0f;
 
     private float phaseTimer;
 
@@ -60,10 +61,9 @@ public class Player : MonoBehaviour
                     {
                         Shoot();
                         shootTimer = 0f;
-                    }
 
-                    wobbleTimer += Time.deltaTime;
-                    wobbleTimer %= math.PI * 2;
+                        shootRecoilVelocity -= 3f;
+                    }
                 }
             }
 
@@ -81,22 +81,17 @@ public class Player : MonoBehaviour
         {
             ResetPlayer();
         }
-        
+
+        shootRecoilAmount += shootRecoilVelocity * Time.deltaTime;
+        shootRecoilVelocity += (0 - shootRecoilAmount);
+        shootRecoilVelocity *= 0.98f;
+
         body.transform.position =
             new Vector3(
                 transform.position.x,
-                transform.position.y + math.cos(wobbleTimer * 29) * 0.13f,
+                transform.position.y + shootRecoilAmount,
                 transform.position.z
             );
-
-        if (!Input.GetKey(KeyCode.Mouse0))
-        {
-            float x_ = math.cos(wobbleTimer);
-            float y_ = math.sin(wobbleTimer);
-            float x_e = x_ + (math.cos(0) - x_) * 0.2f;
-            float y_e = y_ + (math.sin(0) - y_) * 0.2f;
-            wobbleTimer = math.atan2(y_e, x_e);
-        }
 
         UpdatePlayer(wallPoints, mouseX);
 

@@ -38,65 +38,54 @@ public static class LineCollisionHelper
                     normal = new Vector2(-ba.y, ba.x).normalized;
                 }
 
-                // Positional correction (push out to the surface of the thick line)
                 pos = closest + normal * effectiveRadius;
 
                 if (isPlayer)
                 {
-                    // Check if the surface normal is traversable (-90 to 90 degrees relative to up -> normal.y >= 0)
                     if (normal.y < 0)
                     {
-                        // Untraversable wall/ceiling (steeper than 90 degrees): push player back out of it horizontally/vertically
                         continue;
                     }
 
-                    // Return the valid surface normal via the velocity parameter for tilting
                     velocity = normal;
                     pos = closest + normal * effectiveRadius;
                 }
                 else
                 {
-                    // Velocity response
                     float dot = Vector2.Dot(velocity, normal);
                     if (dot < 0)
                     {
                         if (isBallBounce)
                         {
-                            // 1. Calculate the standard bounce vector first to see where the player wants to deflect
-                            Vector2 bouncedVelocity = velocity - 2f * dot * normal;
+                            Vector2 bounceVel = velocity - 2f * dot * normal;
 
-                            float xVelAbs = Mathf.Abs(bouncedVelocity.x);
-                            float yVelAbs = Mathf.Abs(bouncedVelocity.y);
+                            float yVelAb = Mathf.Abs(bounceVel.normalized.y);
+                            float yLim = 0.8f;
 
                             float bS = 14f;
+                            float xLim = 9f;
 
-                            // 2. Filter by surface type
-                            if (normal.y > 0.71f) // Walkable Floor / Shallow Slope
+                            if (normal.y > 0)
                             {
-                                // Apply your speed rules to the resulting deflection
-                                if (yVelAbs >= xVelAbs)
+                                if (yVelAb >= yLim && yVelAb > Mathf.Abs(bounceVel.normalized.x))
                                 {
-                                    velocity = bouncedVelocity.normalized * bS;
+                                    velocity = bounceVel.normalized * bS;
                                 }
-                                else // yvel is smaller than xvel
+                                else
                                 {
-                                    bouncedVelocity.y = bS;
-                                    velocity = bouncedVelocity.normalized * bS;
+                                    float xVel;
+                                    if (bounceVel.x >= 0) xVel = Mathf.Min(bounceVel.x, xLim);
+                                    else /* align text */ xVel = Mathf.Max(bounceVel.x, -xLim);
+                                    velocity = (new Vector2(xVel, bS)).normalized * bS;
                                 }
                             }
-                            else if (normal.y > 0) // Steep Wall / Side of a slope pointing up
+                            else // ceiling
                             {
-                                bouncedVelocity.y = bS;
-                                velocity = bouncedVelocity.normalized * bS;
-                            }
-                            else // Ceiling / Roof (normal.y <= 0)
-                            {
-                                velocity = bouncedVelocity;
+                                velocity = bounceVel;
                             }
                         }
                         else
                         {
-                            // Currency dampening bounce
                             velocity -= (1f + 0.5f) * dot * normal;
                         }
                     }
