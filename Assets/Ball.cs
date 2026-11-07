@@ -380,7 +380,6 @@ public class Ball : MonoBehaviour
         SpawnDamageNumber(damage, damageType);
 
         if (health <= 0) DestroyBall();
-        else { spawnHitParticles(transform.position); }
     }
 
     public void DestroyBall()
@@ -452,7 +451,7 @@ public class Ball : MonoBehaviour
             var p = poisonEffects[i];
             p.elapsed += dt;
 
-            // Accumulate fractional damage
+            // Accumulate tick
             p.damageAccumulator += dt;
             if (p.damageAccumulator >= 0.3f)
             {
@@ -582,26 +581,6 @@ public class Ball : MonoBehaviour
             Particle p = particle.AddComponent<Particle>();
             Vector2 randomDir = UnityEngine.Random.insideUnitCircle.normalized;
             float speed = UnityEngine.Random.Range(6f, 12f);
-            p.Initialize(randomDir * speed, UnityEngine.Random.Range(0.4f, 1.2f));
-        }
-    }
-    
-    private void spawnHitParticles(Vector3 position)
-    {
-        int particleCount = Mathf.Max(UnityEngine.Random.Range(-1, 3), 0);
-
-        for (int i = 0; i < particleCount; i++)
-        {
-            GameObject particle = new GameObject("Particle");
-            particle.transform.position = position;
-
-            SpriteRenderer sr = particle.AddComponent<SpriteRenderer>();
-            sr.sprite = CreateParticleSprite();
-            sr.color = color; // Use ball's color
-
-            Particle p = particle.AddComponent<Particle>();
-            Vector2 randomDir = UnityEngine.Random.insideUnitCircle.normalized;
-            float speed = UnityEngine.Random.Range(1f, 2f);
             p.Initialize(randomDir * speed, UnityEngine.Random.Range(0.4f, 1.2f));
         }
     }

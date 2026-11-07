@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Unity.Mathematics;
 using UnityEngine;
@@ -6,7 +7,7 @@ public class Player : MonoBehaviour
 {
     [SerializeField] private CameraShake cameraShake;
     [SerializeField] private FlatLandscape flatLandscape;
-    [SerializeField] private GameObject bulletPrefab;
+    private static Sprite cachedHexagonSprite;
     [SerializeField] private BallSpawner ballSpawner;
 
     [SerializeField] public float initPlayerHealth = 1;
@@ -62,7 +63,7 @@ public class Player : MonoBehaviour
                         Shoot();
                         shootTimer = 0f;
 
-                        shootRecoilVelocity -= 3f;
+                        shootRecoilVelocity -= 4f;
                     }
                 }
             }
@@ -82,9 +83,10 @@ public class Player : MonoBehaviour
             ResetPlayer();
         }
 
+        shootRecoilVelocity = Mathf.Max(-4, Mathf.Min(4, shootRecoilVelocity));
         shootRecoilAmount += shootRecoilVelocity * Time.deltaTime;
         shootRecoilVelocity += (0 - shootRecoilAmount);
-        shootRecoilVelocity *= 0.98f;
+        shootRecoilVelocity *= 0.95f;
 
         body.transform.position =
             new Vector3(
@@ -219,7 +221,96 @@ public class Player : MonoBehaviour
 
     private void Shoot()
     {
-        GameObject bullet = Instantiate(bulletPrefab, transform.position + new Vector3(0, 1, 0), Quaternion.identity);
+        Sprite CreatePolygonSprite(int sides, float radius, Color color, int resolution)
+        {
+            int diameter = resolution;
+            Texture2D texture = new Texture2D(diameter, diameter, TextureFormat.RGBA32, false);
+
+            // Use a flat color array for fast bulk processing
+            Color32[] pixels = new Color32[diameter * diameter];
+            Color32 clearColor = new Color32(0, 0, 0, 0);
+            Color32 fillColor = color;
+
+            for (int i = 0; i < pixels.Length; i++)
+                pixels[i] = clearColor;
+
+            Vector2 center = new Vector2(diameter / 2f, diameter / 2f);
+            float radiusPixels = diameter / 2f - 2f;
+
+            // Calculate vertices
+            Vector2[] vertices = new Vector2[sides];
+            for (int i = 0; i < sides; i++)
+            {
+                float angle = i * 2f * Mathf.PI / sides - Mathf.PI / 2f;
+                vertices[i] = new Vector2(
+                    center.x + radiusPixels * Mathf.Cos(angle),
+                    center.y + radiusPixels * Mathf.Sin(angle)
+                );
+            }
+
+            // Fill triangles from the center to each edge
+            for (int i = 0; i < sides; i++)
+            {
+                FillSolidTriangle(pixels, diameter, center, vertices[i], vertices[(i + 1) % sides], fillColor);
+            }
+
+            texture.SetPixels32(pixels);
+            texture.Apply();
+            texture.filterMode = FilterMode.Bilinear;
+
+            return Sprite.Create(texture, new Rect(0, 0, diameter, diameter), new Vector2(0.5f, 0.5f), diameter / (radius * 2f));
+        }
+
+        void FillSolidTriangle(Color32[] pixels, int diameter, Vector2 center, Vector2 v1, Vector2 v2, Color32 color)
+        {
+            int minX = Mathf.Clamp(Mathf.FloorToInt(Mathf.Min(center.x, v1.x, v2.x)), 0, diameter - 1);
+            int maxX = Mathf.Clamp(Mathf.CeilToInt(Mathf.Max(center.x, v1.x, v2.x)), 0, diameter - 1);
+            int minY = Mathf.Clamp(Mathf.FloorToInt(Mathf.Min(center.y, v1.y, v2.y)), 0, diameter - 1);
+            int maxY = Mathf.Clamp(Mathf.CeilToInt(Mathf.Max(center.y, v1.y, v2.y)), 0, diameter - 1);
+
+            for (int y = minY; y <= maxY; y++)
+            {
+                for (int x = minX; x <= maxX; x++)
+                {
+                    Vector2 p = new Vector2(x, y);
+                    if (IsPointInTriangle(p, center, v1, v2))
+                    {
+                        pixels[y * diameter + x] = color;
+                    }
+                }
+            }
+        }
+
+        bool IsPointInTriangle(Vector2 p, Vector2 a, Vector2 b, Vector2 c)
+        {
+            float denom = ((b.y - c.y) * (a.x - c.x) + (c.x - b.x) * (a.y - c.y));
+            if (Mathf.Abs(denom) < 0.0001f) return false;
+            float alpha = ((b.y - c.y) * (p.x - c.x) + (c.x - b.x) * (p.y - c.y)) / denom;
+            float beta = ((c.y - a.y) * (p.x - c.x) + (a.x - c.x) * (p.y - c.y)) / denom;
+            float gamma = 1f - alpha - beta;
+            return alpha >= 0 && beta >= 0 && gamma >= 0;
+        }
+
+        Sprite GetHexagonSprite()
+        {
+            if (cachedHexagonSprite == null)
+            {
+                cachedHexagonSprite = CreatePolygonSprite(6, 0.23f, new Color(1f, 1f, 0f), 32);
+            }
+            return cachedHexagonSprite;
+        }
+
+        GameObject bullet = new("HexagonBullet");
+        bullet.transform.position = transform.position + new Vector3(0, 1, 0);
+
+        SpriteRenderer spriteRenderer = bullet.AddComponent<SpriteRenderer>();
+        spriteRenderer.sprite = GetHexagonSprite();
+
+        bullet.AddComponent<CircleCollider2D>();
+        bullet.AddComponent<Rigidbody2D>();
+        bullet.GetComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Dynamic;
+        bullet.GetComponent<Rigidbody2D>().collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+        bullet.AddComponent<Bullet>();
         bullet.GetComponent<Bullet>().Initialize(
             GameManager.Instance.bulletDamage,
             GameManager.Instance.lightningDamage,

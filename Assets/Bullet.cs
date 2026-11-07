@@ -31,6 +31,23 @@ public class Bullet : MonoBehaviour
         if (transform.position.y > 10f) Destroy(gameObject);
     }
 
+    private Sprite CreateParticleSprite()
+    {
+        int size = 20;
+        Texture2D texture = new Texture2D(size, size);
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                texture.SetPixel(x, y, Color.white);
+            }
+        }
+
+        texture.Apply();
+        return Sprite.Create(texture, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f);
+    }
+
     void OnTriggerEnter2D(Collider2D other)
     {
         if (hasHit) return;
@@ -48,6 +65,22 @@ public class Bullet : MonoBehaviour
         if (poisonDuration > 0 && poisonDamagePerSec > 0)
         {
             ball.ApplyPoison(poisonDamagePerSec, poisonDuration);
+        }
+
+        int particleCount = UnityEngine.Random.Range(2, 5);
+        for (int i = 0; i < particleCount; i++)
+        {
+            GameObject particle = new("Particle");
+            particle.transform.position = transform.position;
+
+            SpriteRenderer sr = particle.AddComponent<SpriteRenderer>();
+            sr.sprite = CreateParticleSprite();
+            sr.color = new UnityEngine.Color(1f, 1f, 0f);
+
+            Particle p = particle.AddComponent<Particle>();
+            Vector2 randomDir = UnityEngine.Random.insideUnitCircle.normalized;
+            float speed = UnityEngine.Random.Range(1f, 2f);
+            p.Initialize(randomDir * speed + new Vector2(0, 20f), UnityEngine.Random.Range(0.4f, 1.2f));
         }
 
         Destroy(gameObject);
