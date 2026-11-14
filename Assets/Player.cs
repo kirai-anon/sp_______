@@ -10,8 +10,7 @@ public class Player : MonoBehaviour
     private static Sprite cachedHexagonSprite;
     [SerializeField] private BallSpawner ballSpawner;
 
-    [SerializeField] public float initPlayerHealth = 1;
-    
+    public float initPlayerHealth = 1;
     public float playerHealth = 1;
     private float invincibleTimer;
 
@@ -23,6 +22,9 @@ public class Player : MonoBehaviour
 
     private float shootRecoilAmount = 0f;
     private float shootRecoilVelocity = 0f;
+
+    private readonly float shootRecoilImpulse = 7f;
+    private readonly float shootRecoilVelocityKept = 0.95f;
 
     private float phaseTimer;
 
@@ -63,7 +65,7 @@ public class Player : MonoBehaviour
                         Shoot();
                         shootTimer = 0f;
 
-                        shootRecoilVelocity -= 4f;
+                        shootRecoilVelocity -= shootRecoilImpulse;
                     }
                 }
             }
@@ -83,10 +85,9 @@ public class Player : MonoBehaviour
             ResetPlayer();
         }
 
-        shootRecoilVelocity = Mathf.Max(-4, Mathf.Min(4, shootRecoilVelocity));
+        shootRecoilVelocity = Mathf.Max(-shootRecoilImpulse, Mathf.Min(shootRecoilImpulse, shootRecoilVelocity));
         shootRecoilAmount += shootRecoilVelocity * Time.deltaTime;
-        shootRecoilVelocity += (0 - shootRecoilAmount);
-        shootRecoilVelocity *= 0.95f;
+        shootRecoilVelocity = (shootRecoilVelocity - shootRecoilAmount) * shootRecoilVelocityKept;
 
         body.transform.position =
             new Vector3(
@@ -114,109 +115,316 @@ public class Player : MonoBehaviour
 
         int count = wallLineRenderer.positionCount;
         Vector2[] wallPoints = new Vector2[count];
-        float minLineX = float.MaxValue;
-        float maxLineX = float.MinValue;
 
         for (int i = 0; i < count; i++)
         {
             Vector3 p = wallLineRenderer.GetPosition(i);
             wallPoints[i] = new Vector2(p.x, p.y);
-            if (p.x < minLineX) minLineX = p.x;
-            if (p.x > maxLineX) maxLineX = p.x;
         }
 
         float halfWheelBase = 1.0f;
-        float totalOffset = 1.0f; // from wheel to visual center
+        float wheelRadius = 0.5f;
+        float totalOffset = 1.5f; // Updated to match the new -1.25 wheel rest position
+        float moveSpeedFactor = 0.8f;
 
-        // move the tank's center x directly towards the mouse
-        float currentX = transform.position.x;
-        float targetX = Mathf.Lerp(currentX, mouseX, 0.2f);
+        // 1. Dynamically find raw traversable X bounds based on segment normals (normal.y >= 0)
+        float rawMinX = float.MaxValue;
+        float rawMaxX = float.MinValue;
 
-        // clamp center x so the wheels never fall off the ends of the line
-        targetX = Mathf.Clamp(targetX, minLineX + halfWheelBase, maxLineX - halfWheelBase);
-
-        bool GetWheelContact(float queryX, out Vector2 contactPoint, out Vector2 normal, out bool traversable)
+        for (int i = 0; i < wallPoints.Length - 1; i++)
         {
-            contactPoint = Vector2.zero;
-            normal = Vector2.up;
-            traversable = false;
+            Vector2 a = wallPoints[i];
+            Vector2 b = wallPoints[i + 1];
 
-            if (wallPoints.Length < 2) return false;
-
-            // Clamp queryX to line bounds to prevent out-of-bounds errors or corner sticking
-            queryX = Mathf.Clamp(queryX, minLineX, maxLineX);
-
-            int bestSegIndex = 0;
-            float bestT = 0f;
-            float minDst = float.MaxValue;
-
-            for (int i = 0; i < wallPoints.Length - 1; i++)
-            {
-                Vector2 a = wallPoints[i];
-                Vector2 b = wallPoints[i + 1];
-                float segMinX = Mathf.Min(a.x, b.x);
-                float segMaxX = Mathf.Max(a.x, b.x);
-
-                if (queryX >= segMinX - 0.01f && queryX <= segMaxX + 0.01f)
-                {
-                    bestSegIndex = i;
-                    float lengthX = b.x - a.x;
-                    bestT = Mathf.Abs(lengthX) < 0.0001f ? 0f : (queryX - a.x) / lengthX;
-                    bestT = Mathf.Clamp01(bestT);
-                    break;
-                }
-
-                float midX = (a.x + b.x) * 0.5f;
-                float dst = Mathf.Abs(queryX - midX);
-                if (dst < minDst)
-                {
-                    minDst = dst;
-                    bestSegIndex = i;
-                    float lengthX = b.x - a.x;
-                    bestT = Mathf.Abs(lengthX) < 0.0001f ? 0f : (queryX - a.x) / lengthX;
-                    bestT = Mathf.Clamp01(bestT);
-                }
-            }
-
-            Vector2 segA = wallPoints[bestSegIndex];
-            Vector2 segB = wallPoints[bestSegIndex + 1];
-            float y = Mathf.Lerp(segA.y, segB.y, bestT);
-            contactPoint = new Vector2(queryX, y);
-
-            Vector2 dir = (segB - segA).normalized;
-            normal = new Vector2(-dir.y, dir.x);
+            Vector2 dir = (b - a).normalized;
+            Vector2 normal = new Vector2(-dir.y, dir.x);
             if (normal.y < 0) normal = -normal;
 
-            // traversable rule: -90 to 90 degrees relative to up
-            traversable = (normal.y >= 0);
-            return true;
+            if (normal.y >= 0)
+            {
+                rawMinX = Mathf.Min(rawMinX, Mathf.Min(a.x, b.x));
+                rawMaxX = Mathf.Max(rawMaxX, Mathf.Max(a.x, b.x));
+            }
         }
 
-        // position the left and right wheels relative to targetX
-        float leftX = targetX - halfWheelBase;
-        float rightX = targetX + halfWheelBase;
+        if (rawMinX > rawMaxX) return;
 
-        GetWheelContact(leftX, out Vector2 leftWheel, out Vector2 normalL, out bool travL);
-        GetWheelContact(rightX, out Vector2 rightWheel, out Vector2 normalR, out bool travR);
+        // Pad bounds by wheel offset + radius
+        float minTraversableX = rawMinX + halfWheelBase + wheelRadius;
+        float maxTraversableX = rawMaxX - halfWheelBase - wheelRadius;
+        if (minTraversableX > maxTraversableX)
+        {
+            minTraversableX = rawMinX;
+            maxTraversableX = rawMaxX;
+        }
 
-        // calculate final position and rotation
+        float clampedMouseX = Mathf.Clamp(mouseX, minTraversableX, maxTraversableX);
+
+        // 2. Find current continuous position on the polyline
+        GetClosestPointOnLine(transform.position, wallPoints, out int currentSeg, out float currentT);
+        Vector2 currentContact = Vector2.Lerp(wallPoints[currentSeg], wallPoints[currentSeg + 1], currentT);
+
+        // 3. Find target segment and t for the clamped mouseX
+        int targetSeg = currentSeg;
+        float targetT = currentT;
+        FindSegmentAndTForX(clampedMouseX, wallPoints, out targetSeg, out targetT);
+
+        // 4. Traverse segment-by-segment from current to target, checking traversability (normal.y >= 0)
+        int finalSeg = currentSeg;
+        float finalT = currentT;
+
+        int step = (targetSeg >= currentSeg) ? 1 : -1;
+        int travIndex = currentSeg;
+
+        while (travIndex != targetSeg)
+        {
+            int nextIndex = travIndex + step;
+            if (nextIndex < 0 || nextIndex >= wallPoints.Length - 1) break;
+
+            Vector2 a = wallPoints[nextIndex];
+            Vector2 b = wallPoints[nextIndex + 1];
+
+            Vector2 dir = (b - a).normalized;
+            Vector2 normal = new Vector2(-dir.y, dir.x);
+            if (normal.y < 0) normal = -normal;
+
+            // Blocked by non-traversable wall/ceiling
+            if (normal.y < 0) break;
+
+            travIndex = nextIndex;
+            finalSeg = travIndex;
+
+            if (travIndex == targetSeg)
+            {
+                finalT = targetT;
+            }
+            else
+            {
+                finalT = (step > 0) ? 1f : 0f;
+            }
+        }
+
+        if (travIndex == targetSeg && finalSeg == targetSeg)
+        {
+            finalT = targetT;
+        }
+
+        Vector2 desiredContact = Vector2.Lerp(wallPoints[finalSeg], wallPoints[finalSeg + 1], finalT);
+
+        // 5. Smoothly interpolate contact point towards desired target
+        Vector2 smoothedContact = Vector2.Lerp(currentContact, desiredContact, moveSpeedFactor);
+        int smoothSeg = currentSeg;
+        float smoothT = currentT;
+        GetClosestPointOnLine(smoothedContact, wallPoints, out smoothSeg, out smoothT);
+
+        // Get center normal for safety fallback
+        Vector2 centerSegA = wallPoints[smoothSeg];
+        Vector2 centerSegB = wallPoints[smoothSeg + 1];
+        Vector2 centerDir = (centerSegB - centerSegA).normalized;
+        Vector2 centerNormal = new Vector2(-centerDir.y, centerDir.x);
+        if (centerNormal.y < 0) centerNormal = -centerNormal;
+
+        // 6. Sample Left and Right wheels along the arc distance
+        Vector2 leftWheel = GetPointAlongArc(wallPoints, smoothSeg, smoothT, -halfWheelBase, out Vector2 normalL, out bool travL);
+        Vector2 rightWheel = GetPointAlongArc(wallPoints, smoothSeg, smoothT, halfWheelBase, out Vector2 normalR, out bool travR);
+
+        // 7. Robust Normal Blending (>90 degree angle safeguards)
+        Vector2 avgNormal = centerNormal;
+        if (travL && travR)
+        {
+            if (Vector2.Dot(normalL, normalR) >= 0f)
+            {
+                Vector2 combined = (normalL + normalR).normalized;
+                if (combined.sqrMagnitude > 0.001f)
+                {
+                    avgNormal = combined;
+                }
+            }
+        }
+        else if (travL)
+        {
+            avgNormal = normalL;
+        }
+        else if (travR)
+        {
+            avgNormal = normalR;
+        }
+
+        if (avgNormal.y < 0.05f) avgNormal = new Vector2(avgNormal.x, 0.05f).normalized;
+
+        // 8. X-Alignment Correction: Adjust position so final center X precisely matches target X
         Vector2 wheelMidpoint = (leftWheel + rightWheel) * 0.5f;
-        Vector2 avgNormal = ((travL ? normalL : Vector2.up) + (travR ? normalR : Vector2.up)).normalized;
+        Vector2 initialCenterPos = wheelMidpoint + (avgNormal * totalOffset);
 
-        // apply x from mouse lerp and calculate y using wheel math
-        Vector3 pos = new Vector3(targetX, wheelMidpoint.y + (avgNormal.y * totalOffset), transform.position.z);
+        // Calculate the X error caused by the normal offset and correct it
+        float xError = clampedMouseX - initialCenterPos.x;
+        Vector2 correctedContact = smoothedContact + new Vector2(xError, 0);
 
-        // Smoothly apply position
-        transform.position = pos;
+        // Re-sample with the corrected contact point for exact X alignment
+        GetClosestPointOnLine(correctedContact, wallPoints, out smoothSeg, out smoothT);
+        leftWheel = GetPointAlongArc(wallPoints, smoothSeg, smoothT, -halfWheelBase, out normalL, out travL);
+        rightWheel = GetPointAlongArc(wallPoints, smoothSeg, smoothT, halfWheelBase, out normalR, out travR);
+        wheelMidpoint = (leftWheel + rightWheel) * 0.5f;
 
-        // orient the tank
+        Vector2 finalCenterPos = wheelMidpoint + (avgNormal * totalOffset);
+
+        // Apply final position
+        transform.position = new Vector3(finalCenterPos.x, finalCenterPos.y, transform.position.z);
+
+        // 9. Orient tracks to wheel slope, keep body pointing straight up
         Vector2 wheelDirection = (rightWheel - leftWheel).normalized;
         if (wheelDirection.sqrMagnitude > 0.0001f)
         {
             float targetAngle = Mathf.Atan2(wheelDirection.y, wheelDirection.x) * Mathf.Rad2Deg;
             transform.rotation = Quaternion.Euler(0, 0, targetAngle);
-            this.body.transform.rotation = Quaternion.Euler(0, 0, 0);
+
+            if (this.body != null)
+            {
+                this.body.transform.rotation = Quaternion.identity; // Points straight up in world space
+            }
         }
+    }
+
+    // --- Helper Methods ---
+
+    private void GetClosestPointOnLine(Vector2 pos, Vector2[] points, out int bestSeg, out float bestT)
+    {
+        bestSeg = 0;
+        bestT = 0f;
+        float minDistSqr = float.MaxValue;
+
+        for (int i = 0; i < points.Length - 1; i++)
+        {
+            Vector2 a = points[i];
+            Vector2 b = points[i + 1];
+            Vector2 ab = b - a;
+            float lenSqr = ab.sqrMagnitude;
+
+            float t = 0f;
+            if (lenSqr > 0.0001f)
+            {
+                t = Vector2.Dot(pos - a, ab) / lenSqr;
+                t = Mathf.Clamp01(t);
+            }
+
+            Vector2 p = a + ab * t;
+            float distSqr = (pos - p).sqrMagnitude;
+
+            if (distSqr < minDistSqr)
+            {
+                minDistSqr = distSqr;
+                bestSeg = i;
+                bestT = t;
+            }
+        }
+    }
+
+    private void FindSegmentAndTForX(float targetX, Vector2[] points, out int targetSeg, out float targetT)
+    {
+        targetSeg = 0;
+        targetT = 0f;
+
+        for (int i = 0; i < points.Length - 1; i++)
+        {
+            float minX = Mathf.Min(points[i].x, points[i + 1].x);
+            float maxX = Mathf.Max(points[i].x, points[i + 1].x);
+
+            if (targetX >= minX && targetX <= maxX)
+            {
+                targetSeg = i;
+                float lengthX = points[i + 1].x - points[i].x;
+                targetT = Mathf.Abs(lengthX) < 0.0001f ? 0f : (targetX - points[i].x) / lengthX;
+                targetT = Mathf.Clamp01(targetT);
+                return;
+            }
+        }
+
+        if (targetX < points[0].x)
+        {
+            targetSeg = 0;
+            targetT = 0f;
+        }
+        else
+        {
+            targetSeg = points.Length - 2;
+            targetT = 1f;
+        }
+    }
+
+    private Vector2 GetPointAlongArc(Vector2[] points, int startSeg, float startT, float distanceOffset, out Vector2 normal, out bool traversable)
+    {
+        int currentSeg = startSeg;
+        float currentT = startT;
+        float remainingDist = Mathf.Abs(distanceOffset);
+        int dir = (distanceOffset >= 0) ? 1 : -1;
+
+        normal = Vector2.up;
+        traversable = true;
+
+        while (remainingDist > 0f)
+        {
+            Vector2 a = points[currentSeg];
+            Vector2 b = points[currentSeg + 1];
+            float segLen = Vector2.Distance(a, b);
+            float currentSegCovered = segLen * currentT;
+
+            if (dir > 0)
+            {
+                float distTopping = segLen - currentSegCovered;
+                if (remainingDist <= distTopping)
+                {
+                    currentT += remainingDist / segLen;
+                    remainingDist = 0f;
+                }
+                else
+                {
+                    remainingDist -= distTopping;
+                    if (currentSeg < points.Length - 2)
+                    {
+                        currentSeg++;
+                        currentT = 0f;
+                    }
+                    else
+                    {
+                        currentT = 1f;
+                        remainingDist = 0f;
+                    }
+                }
+            }
+            else
+            {
+                if (remainingDist <= currentSegCovered)
+                {
+                    currentT -= remainingDist / segLen;
+                    remainingDist = 0f;
+                }
+                else
+                {
+                    remainingDist -= currentSegCovered;
+                    if (currentSeg > 0)
+                    {
+                        currentSeg--;
+                        currentT = 1f;
+                    }
+                    else
+                    {
+                        currentT = 0f;
+                        remainingDist = 0f;
+                    }
+                }
+            }
+        }
+
+        Vector2 segA = points[currentSeg];
+        Vector2 segB = points[currentSeg + 1];
+        Vector2 resultPos = Vector2.Lerp(segA, segB, Mathf.Clamp01(currentT));
+
+        Vector2 segDir = (segB - segA).normalized;
+        normal = new Vector2(-segDir.y, segDir.x);
+        if (normal.y < 0) normal = -normal;
+
+        traversable = (normal.y >= 0);
+        return resultPos;
     }
 
     private void Shoot()

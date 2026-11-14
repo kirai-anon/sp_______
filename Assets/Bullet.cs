@@ -80,7 +80,7 @@ public class Bullet : MonoBehaviour
             Particle p = particle.AddComponent<Particle>();
             Vector2 randomDir = UnityEngine.Random.insideUnitCircle.normalized;
             float speed = UnityEngine.Random.Range(1f, 2f);
-            p.Initialize(randomDir * speed + new Vector2(0, 20f), UnityEngine.Random.Range(0.4f, 1.2f));
+            p.Initialize(randomDir * speed + new Vector2(0, 10f), UnityEngine.Random.Range(0.4f, 1.2f));
         }
 
         Destroy(gameObject);
