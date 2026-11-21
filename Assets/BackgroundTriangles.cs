@@ -16,12 +16,15 @@ public class FlatLandscape : MonoBehaviour
 
     [Header("Color Shifting")]
     public float colorChangeSpeed = 1.5f;
+    public Color pulseGlowColor = new Color(0.2f, 0.6f, 1f);
 
     [Header("Audio Settings")]
-    public float pulseIntensity = 1f;
-    public float pulseSensitivity = 1f;
-    // 512 is a standard buffer size for spectrum analysis
+    public float pulseIntensity = 2f;
+    public float pulseSensitivity = 15f;
+    [Range(1f, 30f)] public float fallSpeed = 12f; // Smooths out jittery frames
+
     private float[] spectrum = new float[512];
+    private float[] smoothedSpectrum = new float[64];
     private int[] triangleFrequencyMap;
 
     private Mesh mesh;
@@ -50,29 +53,31 @@ public class FlatLandscape : MonoBehaviour
                 baseGrid[x, y] = new Vector3(
                     x * spacing - hW + Random.Range(-baseJitter, baseJitter),
                     y * spacing - hH + Random.Range(-baseJitter, baseJitter),
-                    10
+                    10f
                 );
 
         int triCount = width * height * 2;
         vertices = new Vector3[triCount * 3];
         colors = new Color[triCount * 3];
         targetColors = new Color[triCount * 3];
-
-        // Map each triangle to a random frequency bin (0-511)
         triangleFrequencyMap = new int[triCount];
 
         int[] triangles = new int[triCount * 3];
 
         for (int i = 0; i < triCount; i++)
         {
-            // We favor lower indices (0-64) because music energy is usually in the bass/mids
             triangleFrequencyMap[i] = Random.Range(0, 64);
 
             int baseIdx = i * 3;
             triangles[baseIdx] = baseIdx;
             triangles[baseIdx + 1] = baseIdx + 1;
             triangles[baseIdx + 2] = baseIdx + 2;
-            targetColors[baseIdx] = GetBlueColor();
+
+            Color startCol = GetBlueColor();
+            targetColors[baseIdx] = startCol;
+            colors[baseIdx] = startCol;
+            colors[baseIdx + 1] = startCol;
+            colors[baseIdx + 2] = startCol;
         }
 
         mesh.vertices = vertices;
@@ -81,10 +86,24 @@ public class FlatLandscape : MonoBehaviour
 
     void Update()
     {
-        // 1. Get the latest audio data
-        if (targetMusicSource != null)
+        if (targetMusicSource != null && targetMusicSource.isPlaying)
         {
             targetMusicSource.GetSpectrumData(spectrum, 0, FFTWindow.BlackmanHarris);
+
+            // Process and smooth the first 64 frequency bins
+            for (int i = 0; i < 64; i++)
+            {
+                // Boost higher frequencies so trebles/mids are as visible as bass
+                float frequencyBoost = 1f + (i * 0.25f);
+                // Sqrt compresses extreme bass spikes and lifts quiet beats
+                float rawValue = Mathf.Sqrt(spectrum[i] * frequencyBoost) * pulseSensitivity;
+
+                // Snap up instantly on beats, decay smoothly when quiet
+                if (rawValue > smoothedSpectrum[i])
+                    smoothedSpectrum[i] = rawValue;
+                else
+                    smoothedSpectrum[i] = Mathf.Lerp(smoothedSpectrum[i], rawValue, Time.deltaTime * fallSpeed);
+            }
         }
 
         int v = 0;
@@ -100,14 +119,12 @@ public class FlatLandscape : MonoBehaviour
                 Vector3 tr = GetDriftedPos(x + 1, y + 1, time);
                 Vector3 br = GetDriftedPos(x + 1, y, time);
 
-                // Triangle 1 pulse
-                float pulse1 = spectrum[triangleFrequencyMap[triIndex]] * pulseSensitivity * (0.2f + triIndex * pulseIntensity * 5);
+                float pulse1 = smoothedSpectrum[triangleFrequencyMap[triIndex]];
                 UpdateTriangle(v, bl, tl, tr, pulse1);
                 v += 3;
                 triIndex++;
 
-                // Triangle 2 pulse
-                float pulse2 = spectrum[triangleFrequencyMap[triIndex]] * pulseSensitivity * (0.2f + triIndex * pulseIntensity * 5);
+                float pulse2 = smoothedSpectrum[triangleFrequencyMap[triIndex]];
                 UpdateTriangle(v, bl, tr, br, pulse2);
                 v += 3;
                 triIndex++;
@@ -116,20 +133,22 @@ public class FlatLandscape : MonoBehaviour
 
         mesh.vertices = vertices;
         mesh.colors = colors;
+        mesh.RecalculateBounds(); // Prevents camera frustum culling when vertices move
     }
 
     void UpdateTriangle(int index, Vector3 p1, Vector3 p2, Vector3 p3, float pulse)
     {
-        if (Random.value < 0.003f) targetColors[index] = GetBlueColor();
+        if (Random.value < 0.001f) targetColors[index] = GetBlueColor();
 
-        // Add the pulse to the color to make it "glow"
-        Color nextColor = Color.Lerp(colors[index], targetColors[index], Time.deltaTime * colorChangeSpeed);
-        Color pulsedColor = nextColor + (new Color(0.5f, 0.5f, 1f) * pulse * pulseIntensity);
+        // Smoothly drift the base ambient color
+        Color baseAmbient = Color.Lerp(colors[index], targetColors[index], Time.deltaTime * colorChangeSpeed);
 
-        for (int i = 0; i < 3; i++) colors[index + i] = pulsedColor;
+        // Add the audio glow on top of the base color
+        Color finalColor = baseAmbient + (pulseGlowColor * pulse);
+        for (int i = 0; i < 3; i++) colors[index + i] = finalColor;
 
-        // Optionally, push the vertices forward on the Z axis based on pulse
-        Vector3 pulseOffset = Vector3.back * pulse * pulseIntensity;
+        // Push forward on Z-axis
+        Vector3 pulseOffset = Vector3.back * (pulse * pulseIntensity);
         vertices[index] = p1 + pulseOffset;
         vertices[index + 1] = p2 + pulseOffset;
         vertices[index + 2] = p3 + pulseOffset;
@@ -138,7 +157,6 @@ public class FlatLandscape : MonoBehaviour
     Vector3 GetDriftedPos(int x, int y, float t)
     {
         Vector3 basePos = baseGrid[x, y];
-        // Use PerlinNoise so neighboring vertices move somewhat together
         float offsetX = (Mathf.PerlinNoise(x * 0.5f + t, y * 0.5f) - 0.5f) * jitterAmount;
         float offsetY = (Mathf.PerlinNoise(x * 0.5f, y * 0.5f + t) - 0.5f) * jitterAmount;
         return basePos + new Vector3(offsetX, offsetY, 0);
@@ -146,7 +164,7 @@ public class FlatLandscape : MonoBehaviour
 
     Color GetBlueColor()
     {
-        float s = Random.Range(0.00f, 0.02f);
-        return new Color(s, s, s+s);
+        float s = Random.Range(0.01f, 0.04f);
+        return new Color(s, s, s * 2.5f);
     }
 }

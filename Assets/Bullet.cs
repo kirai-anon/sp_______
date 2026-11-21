@@ -67,7 +67,7 @@ public class Bullet : MonoBehaviour
             ball.ApplyPoison(poisonDamagePerSec, poisonDuration);
         }
 
-        int particleCount = UnityEngine.Random.Range(2, 5);
+        int particleCount = UnityEngine.Random.Range(2, 4);
         for (int i = 0; i < particleCount; i++)
         {
             GameObject particle = new("Particle");
@@ -79,8 +79,8 @@ public class Bullet : MonoBehaviour
 
             Particle p = particle.AddComponent<Particle>();
             Vector2 randomDir = UnityEngine.Random.insideUnitCircle.normalized;
-            float speed = UnityEngine.Random.Range(1f, 2f);
-            p.Initialize(randomDir * speed + new Vector2(0, 10f), UnityEngine.Random.Range(0.4f, 1.2f));
+            float force = UnityEngine.Random.Range(speed * -0.2f, speed * 0.2f);
+            p.Initialize(randomDir * force + new Vector2(0, speed * 0.2f), UnityEngine.Random.Range(0.4f, 1.2f));
         }
 
         Destroy(gameObject);
